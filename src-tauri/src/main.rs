@@ -3,7 +3,7 @@
     windows_subsystem = "windows"
 )]
 
-use serde::{Deserialize};
+use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 struct MessageContent {
@@ -23,7 +23,9 @@ fn chat_api(messages: Vec<Message>) -> String {
     let last_user_message = messages.iter().rev().find(|m| m.role == "user");
 
     let user_text = if let Some(message) = last_user_message {
-        message.content.iter()
+        message
+            .content
+            .iter()
             .filter(|c| c.msg_type == "text")
             .map(|c| c.text.clone())
             .collect::<Vec<String>>()
@@ -37,6 +39,7 @@ fn chat_api(messages: Vec<Message>) -> String {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_store::Builder::new().build())
         .invoke_handler(tauri::generate_handler![chat_api])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

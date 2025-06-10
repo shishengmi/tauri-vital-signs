@@ -17,12 +17,12 @@ import {
 // 普通菜单项
 const items = [
   {
-    title: "Home",
+    title: "数据可视化",
     url: "#",
     icon: Home,
   },
   {
-    title: "Test",
+    title: "测试",
     url: "#/test",
     icon: Inbox,
   },
@@ -61,14 +61,14 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton>
                   <Settings />
-                  <span>Settings</span>
+                  <span>设置</span>
                 </SidebarMenuButton>
                 <SidebarMenuSub>
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton asChild>
-                      <a href="#/settings/profile">
+                      <a href="#/test/patientInfo">
                         <User />
-                        <span>Profile</span>
+                        <span>病人信息</span>
                       </a>
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
@@ -76,7 +76,7 @@ export function AppSidebar() {
                     <SidebarMenuSubButton asChild>
                       <a href="#/settings/security">
                         <Shield />
-                        <span>Security</span>
+                        <span>通信设置</span>
                       </a>
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
@@ -84,7 +84,7 @@ export function AppSidebar() {
                     <SidebarMenuSubButton asChild>
                       <a href="#/logout">
                         <LogOut />
-                        <span>Logout</span>
+                        <span>AI设置</span>
                       </a>
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
