@@ -1,11 +1,9 @@
 import { Link } from "react-router-dom"
 import {
   NavigationMenu,
-  NavigationMenuContent,
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
-  NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu"
 
 export function SimpleNavMenu() {
@@ -24,32 +22,11 @@ export function SimpleNavMenu() {
 
           {/* 设置（带下拉） */}
           <NavigationMenuItem>
-            <NavigationMenuTrigger>设置</NavigationMenuTrigger>
-            <NavigationMenuContent>
-              <ul className="p-4 w-[200px] space-y-1">
-                <li>
-                  <NavigationMenuLink asChild>
-                    <Link to="/settings/1" className="block px-2 py-1 hover:bg-gray-100 rounded">
-                      设置1
-                    </Link>
-                  </NavigationMenuLink>
-                </li>
-                <li>
-                  <NavigationMenuLink asChild>
-                    <Link to="/settings/2" className="block px-2 py-1 hover:bg-gray-100 rounded">
-                      设置2
-                    </Link>
-                  </NavigationMenuLink>
-                </li>
-                <li>
-                  <NavigationMenuLink asChild>
-                    <Link to="/settings/3" className="block px-2 py-1 hover:bg-gray-100 rounded">
-                      设置3
-                    </Link>
-                  </NavigationMenuLink>
-                </li>
-              </ul>
-            </NavigationMenuContent>
+            <NavigationMenuLink asChild>
+              <Link to="/config" className="px-4 py-2 hover:underline">
+                设置
+              </Link>
+            </NavigationMenuLink>
           </NavigationMenuItem>
 
           {/* 联系 */}

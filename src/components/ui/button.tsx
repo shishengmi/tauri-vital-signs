@@ -35,25 +35,25 @@ const buttonVariants = cva(
   }
 )
 
-const Button = React.forwardRef<
-  HTMLButtonElement,
-  React.ComponentProps<"button"> &
-    VariantProps<typeof buttonVariants> & {
-      asChild?: boolean;
-    }
->(({ className, variant, size, asChild = false, ...props }, ref) => {
-  const Comp = asChild ? Slot : "button";
+function Button({
+  className,
+  variant,
+  size,
+  asChild = false,
+  ...props
+}: React.ComponentProps<"button"> &
+  VariantProps<typeof buttonVariants> & {
+    asChild?: boolean
+  }) {
+  const Comp = asChild ? Slot : "button"
 
   return (
     <Comp
-      ref={ref} // 👈 必须加上这句
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
-  );
-});
-
-Button.displayName = "Button"; // 👈 推荐加上名字以避免调试时显示为 “Anonymous”
+  )
+}
 
 export { Button, buttonVariants }
