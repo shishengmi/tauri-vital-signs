@@ -13,7 +13,7 @@ const ECG_Canvas: React.FC = () => {
         const width = (canvas.width = canvas.offsetWidth);
         const height = (canvas.height = canvas.offsetHeight);
 
-        const bgColor = "#d8cebf"; // 背景色
+        const bgColor = "#030712"; // 背景色
         const lineColor = "lime"; // 心电图颜色
         const gridColor = "#ffffff"; // 网格颜色
 

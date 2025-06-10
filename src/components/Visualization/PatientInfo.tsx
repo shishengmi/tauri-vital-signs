@@ -10,9 +10,9 @@ interface PatientInfoProps {
 
 const PatientInfo: React.FC<PatientInfoProps> = ({ name, gender, age, height, weight }) => {
   return (
-    <div className="bg-white rounded-xl shadow-md p-4 w-full h-full">
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">患者信息</h2>
-      <div className="grid grid-cols-2 gap-y-3 text-sm text-gray-700">
+    <div className="rounded-xl shadow-md p-4 w-full h-full">
+      <h2 className="text-lg font-semibold mb-4">患者信息</h2>
+      <div className="grid grid-cols-2 gap-y-3 text-sm">
         <div><span className="font-medium">姓名：</span>{name}</div>
         <div><span className="font-medium">性别：</span>{gender}</div>
         <div><span className="font-medium">年龄：</span>{age} 岁</div>

@@ -6,11 +6,11 @@ const ECG_Data = () => {
     ];
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-gray-50">
+        <div className="flex-1 flex flex-col">
             {data.map((item, index) => (
                 <div
                     key={index}
-                    className="bg-white flex flex-1 flex-row shadow-md justify-around"
+                    className="flex flex-1 flex-row shadow-md justify-around"
                 >
                     <div className="text-gray-600 text-sm font-medium">{item.label}</div>
                     <div className="text-blue-500 text-3xl font-extrabold">{item.value}</div>
