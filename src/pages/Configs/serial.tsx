@@ -20,45 +20,62 @@ export default function SerialConfig() {
   const [baudRate, setBaudRate] = useState<string>('115200');
   const [status, setStatus] = useState<SerialStatus>({ type: 'Disconnected' });
   const [testing, setTesting] = useState(false);
+  const [logs, setLogs] = useState<string[]>([]);
+
+  const appendLog = (msg: string) => {
+    setLogs((prev) => [
+      ...prev.slice(-200), // 最多保留200条，避免无限增长
+      `[${new Date().toLocaleTimeString()}] ${msg}`
+    ]);
+  };
 
   useEffect(() => {
-    // 获取可用串口列表
     const fetchPorts = async () => {
+      appendLog('请求串口列表...');
       try {
         const availablePorts: [string, string][] = await invoke('get_available_ports');
         setPorts(availablePorts.map(([name, description]) => ({ name, description })));
+        appendLog(`获取到 ${availablePorts.length} 个串口`);
       } catch (error) {
+        appendLog('获取串口列表失败: ' + error);
         console.error('获取串口列表失败:', error);
       }
     };
 
     fetchPorts();
 
-    // 定期检查串口状态
     const checkStatus = async () => {
       try {
         const serialStatus: SerialStatus = await invoke('get_serial_status');
         setStatus(serialStatus);
+        appendLog(
+          `串口状态: ${serialStatus.type}` +
+          (serialStatus.data ? ` (${serialStatus.data})` : '')
+        );
       } catch (error) {
+        appendLog('获取串口状态失败: ' + error);
         console.error('获取串口状态失败:', error);
       }
     };
 
-    const statusInterval = setInterval(checkStatus, 1000);
+    const statusInterval = setInterval(checkStatus, 100);
     return () => clearInterval(statusInterval);
+    // eslint-disable-next-line
   }, []);
 
   const handleTestConnection = async () => {
     if (!selectedPort) return;
-    
     setTesting(true);
+    appendLog(`准备测试串口连接: ${selectedPort} @ ${baudRate}`);
     try {
       await invoke('test_serial_connection', {
         portName: selectedPort,
         baudRate: parseInt(baudRate),
       });
+      appendLog('串口连接测试成功！');
       alert('串口连接测试成功！');
     } catch (error) {
+      appendLog('测试串口连接失败: ' + error);
       console.error('测试串口连接失败:', error);
       alert(`串口连接测试失败: ${error}`);
     } finally {
@@ -67,20 +84,26 @@ export default function SerialConfig() {
   };
 
   const handleConnect = async () => {
+    appendLog(`尝试连接串口: ${selectedPort} @ ${baudRate}`);
     try {
       await invoke('connect_serial', {
         portName: selectedPort,
         baudRate: parseInt(baudRate),
       });
+      appendLog(`连接命令已发送`);
     } catch (error) {
+      appendLog('连接串口失败: ' + error);
       console.error('连接串口失败:', error);
     }
   };
 
   const handleDisconnect = async () => {
+    appendLog('尝试断开串口...');
     try {
       await invoke('disconnect_serial');
+      appendLog('断开命令已发送');
     } catch (error) {
+      appendLog('断开串口失败: ' + error);
       console.error('断开串口失败:', error);
     }
   };
@@ -92,7 +115,10 @@ export default function SerialConfig() {
       <div className="space-y-4">
         <div className="space-y-2">
           <label className="text-sm font-medium">串口选择</label>
-          <Select value={selectedPort} onValueChange={setSelectedPort}>
+          <Select value={selectedPort} onValueChange={(value) => {
+            setSelectedPort(value);
+            appendLog(`选择串口: ${value}`);
+          }}>
             <SelectTrigger>
               <SelectValue placeholder="选择串口" />
             </SelectTrigger>
@@ -111,7 +137,10 @@ export default function SerialConfig() {
           <Input
             type="number"
             value={baudRate}
-            onChange={(e) => setBaudRate(e.target.value)}
+            onChange={(e) => {
+              setBaudRate(e.target.value);
+              appendLog(`修改波特率: ${e.target.value}`);
+            }}
             placeholder="输入波特率"
           />
         </div>
@@ -151,6 +180,18 @@ export default function SerialConfig() {
           >
             断开连接
           </Button>
+        </div>
+
+        {/* 日志输出面板 */}
+        <div className="bg-black/80 rounded-xl p-4 mt-4 text-xs text-gray-100 max-h-52 overflow-auto font-mono">
+          <div>调试输出：</div>
+          {logs.length === 0 ? (
+            <div className="text-gray-400">无</div>
+          ) : (
+            logs.map((msg, idx) => (
+              <div key={idx}>{msg}</div>
+            ))
+          )}
         </div>
       </div>
     </div>

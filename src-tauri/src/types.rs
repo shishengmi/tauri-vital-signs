@@ -27,11 +27,9 @@ pub type DataQueue = Arc<Mutex<VecDeque<VitalSigns>>>;
 
 /// 串口状态枚举
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", content = "data")]
 pub enum SerialStatus {
-    /// 已连接
     Connected(String),  // 包含串口名
-    /// 已断开
     Disconnected,
-    /// 错误状态
-    Error(String),     // 包含错误信息
+    Error(String),      // 包含错误信息
 }
