@@ -22,6 +22,8 @@ impl DataProcessor {
         let processed_data_queue = Arc::new(Mutex::new(VecDeque::with_capacity(1000)));
         
         let ecg_state = Arc::new(Mutex::new(EcgProcessingState {
+            last_heart_rate: 0.0,
+            last_rr_interval: 0.0,
             ecg_point_max: f64::NEG_INFINITY,
             ecg_point_min: f64::INFINITY,
             ecg_point_max_new: 0.0,
@@ -216,27 +218,22 @@ impl DataProcessor {
         }
     }
     
-    /// 处理心电数据 - 基于Python逻辑
     fn process_ecg_data(
         ecg_value: i32,
         ecg_state: &Arc<Mutex<EcgProcessingState>>
     ) -> (f64, f64) {
         let mut state = ecg_state.lock().unwrap();
-        
-        // 添加到原始数据列表
+    
         state.ecg_data_original_list.push(ecg_value);
-        
         let ecg_value_f64 = ecg_value as f64;
-        
-        // 更新最大值和最小值
+    
         if ecg_value_f64 > state.ecg_point_max_new {
             state.ecg_point_max_new = ecg_value_f64;
         }
         if ecg_value_f64 < state.ecg_point_min_new {
             state.ecg_point_min_new = ecg_value_f64;
         }
-        
-        // 每300个数据点更新一次最大最小值
+    
         state.counter += 1;
         if state.counter >= 300 {
             state.ecg_point_max = state.ecg_point_max_new;
@@ -245,34 +242,27 @@ impl DataProcessor {
             state.ecg_point_min_new = f64::INFINITY;
             state.counter = 0;
         }
-        
-        let mut heart_rate = 0.0;
-        let mut rr_interval = 0.0;
-        
+    
         // 波峰检测
         if state.ecg_points.len() < 3 {
             state.ecg_points.push_back(ecg_value);
         } else {
             state.ecg_points.pop_front();
             state.ecg_points.push_back(ecg_value);
-            
+    
             if state.ecg_points.len() == 3 {
                 let points: Vec<i32> = state.ecg_points.iter().cloned().collect();
                 let peak_detection_threshold = 0.6;
-                
-                // 检测波峰
                 if points[0] < points[1] && points[1] > points[2] {
                     let threshold_value = (state.ecg_point_max - state.ecg_point_min) * peak_detection_threshold;
                     if (points[1] as f64 - state.ecg_point_min) > threshold_value {
                         if state.peak_interval_num != 0 {
-                            // 计算心率 (采样率125Hz)
-                            heart_rate = 60.0 / (1.0 / 125.0 * state.peak_interval_num as f64);
-                            
-                            if heart_rate > 100.0 {
-                                heart_rate = 100.0;
-                            }
-                            
-                            rr_interval = 1.0 / heart_rate;
+                            // 检测到波峰，计算心率并**更新缓存**
+                            let mut heart_rate = 60.0 / (1.0 / 250.0 * state.peak_interval_num as f64);
+                            if heart_rate > 100.0 { heart_rate = 100.0; }
+                            let rr_interval = 1.0 / heart_rate;
+                            state.last_heart_rate = heart_rate;
+                            state.last_rr_interval = rr_interval;
                             state.peak_interval_num = 0;
                         }
                     } else {
@@ -283,14 +273,13 @@ impl DataProcessor {
                 }
             }
         }
-        
-        // 处理ECG数据压缩 (简化版，不使用LTTB算法)
+    
         if state.ecg_data_original_list.len() >= 250 {
-            // 这里可以实现数据压缩算法
-            // 暂时清空列表
             state.ecg_data_original_list.clear();
         }
-        
-        (heart_rate, rr_interval)
+    
+        // **始终返回最近一次检测到的有效心率和rr间期**
+        (state.last_heart_rate, state.last_rr_interval)
     }
+    
 }

@@ -41,6 +41,8 @@ pub struct EcgProcessingState {
     pub peak_interval_num: u32,
     pub counter: u32,
     pub ecg_data_original_list: Vec<i32>,
+    pub last_heart_rate: f64,
+    pub last_rr_interval: f64,
 }
 
 /// 体温处理状态
