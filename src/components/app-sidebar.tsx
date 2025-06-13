@@ -1,4 +1,4 @@
-import { Calendar, Home, Inbox, Search, Settings, User, Shield, LogOut } from "lucide-react"
+import { Calendar, Home, Inbox, Search, Settings, User, Shield, LogOut, Terminal } from "lucide-react"
 
 import {
   Sidebar,
@@ -74,9 +74,17 @@ export function AppSidebar() {
                   </SidebarMenuSubItem>
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton asChild>
-                      <a href="#/settings/security">
+                      <a href="#/configs/serial">
                         <Shield />
                         <span>通信设置</span>
+                      </a>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton asChild>
+                      <a href="#/configs/serial-debug">
+                        <Terminal />
+                        <span>串口调试助手</span>
                       </a>
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>

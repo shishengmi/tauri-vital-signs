@@ -1,14 +1,14 @@
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+//! 串口通信库
+
+/// 为类型实现 Send 特征的宏
+#[macro_export]
+macro_rules! undefined_Send_for_SerialManager {
+    () => {
+        unsafe impl Send for SerialManager {}
+    };
 }
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
-}
+// 导出模块
+pub mod serial_manager;
+pub mod serial_reader;
+pub mod types;
