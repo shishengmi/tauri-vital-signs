@@ -13,6 +13,46 @@ pub struct VitalSigns {
     pub temp: i32,
 }
 
+/// 处理后的体征数据
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcessedVitalSigns {
+    /// 原始心电数据
+    pub ecg_raw: i32,
+    /// 处理后的体温
+    pub body_temperature: f64,
+    /// 血氧饱和度
+    pub blood_oxygen: i32,
+    /// 心率
+    pub heart_rate: f64,
+    /// RR间隔
+    pub rr_interval: f64,
+    /// 时间戳
+    pub timestamp: u64,
+}
+
+/// 心电数据处理状态
+#[derive(Debug, Clone)]
+pub struct EcgProcessingState {
+    pub ecg_point_max: f64,
+    pub ecg_point_min: f64,
+    pub ecg_point_max_new: f64,
+    pub ecg_point_min_new: f64,
+    pub ecg_points: VecDeque<i32>,
+    pub peak_interval_num: u32,
+    pub counter: u32,
+    pub ecg_data_original_list: Vec<i32>,
+}
+
+/// 体温处理状态
+#[derive(Debug, Clone)]
+pub struct TemperatureProcessingState {
+    pub temperatures: Vec<f64>,
+    pub scale_factor: f64,
+    pub offset: f64,
+    pub max_temp: f64,
+    pub room_temperature: f64,
+}
+
 /// 串口配置结构
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SerialConfig {
@@ -24,6 +64,7 @@ pub struct SerialConfig {
 
 /// 数据存储队列类型
 pub type DataQueue = Arc<Mutex<VecDeque<VitalSigns>>>;
+pub type ProcessedDataQueue = Arc<Mutex<VecDeque<ProcessedVitalSigns>>>;
 
 /// 串口状态枚举
 #[derive(Debug, Clone, Serialize, Deserialize)]

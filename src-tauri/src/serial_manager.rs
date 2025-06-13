@@ -98,6 +98,11 @@ impl SerialManager {
     pub fn get_status(&self) -> SerialStatus {
         self.status.lock().unwrap().clone()
     }
+
+    /// 获取数据队列的引用 - 新增方法
+    pub fn get_data_queue(&self) -> DataQueue {
+        self.data_queue.clone()
+    }
 }
 
 // 为了线程安全实现必要的特征

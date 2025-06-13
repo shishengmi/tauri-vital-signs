@@ -99,16 +99,16 @@ impl SerialReader {
                     }
                     Ok(_) => {
                         consecutive_errors = 0;
-                        print!("[SerialReader][线程] 原始数据行: {}", line.trim_end());
+                        // print!("[SerialReader][线程] 原始数据行: {}", line.trim_end());
                         if let Some(vital_signs) = Self::parse_data_line(&line) {
-                            println!(" -> 解析成功: {:?}", vital_signs);
+                            // println!(" -> 解析成功: {:?}", vital_signs);
                             let mut queue = data_queue.lock().unwrap();
                             if queue.len() >= 1000 {
-                                println!("[SerialReader][线程] 队列已满，移除最早数据");
+                                // println!("[SerialReader][线程] 队列已满，移除最早数据");
                                 queue.pop_front();
                             }
                             queue.push_back(vital_signs);
-                            println!("[SerialReader][线程] 当前队列长度: {}", queue.len());
+                            // println!("[SerialReader][线程] 当前队列长度: {}", queue.len());
                         } else {
                             println!(" -> 解析失败，无效数据行");
                         }
