@@ -45,7 +45,7 @@ impl TestReader {
                 let spo2_float: f32 = rng.gen_range(95.0..=100.0);
                 let spo2: i32 = (spo2_float * 10.0).round() as i32; // 97.3%→973
 
-                let temp_float: f32 = rng.gen_range(456.0..=46.5);   // 正常体温
+                let temp_float: f32 = rng.gen_range(45.0..=46.5);   // 正常体温
                 let temp: i32 = (temp_float * 10.0).round() as i32; // 36.8℃→368
 
                 let systolic = rng.gen_range(110..140);
