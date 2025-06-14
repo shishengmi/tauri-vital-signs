@@ -6,6 +6,7 @@ import ECG_Canvas from "../components/Visualization/ECG_Canvas";
 import Evaluate from "../components/Visualization/Evaluate";
 import PatientInfo from "../components/Visualization/PatientInfo";
 import Assistant from "../components/Assistant";
+import AIAnalysis from "../components/AIAnalysis";
 
 const Home = () => {
   return (
@@ -26,18 +27,19 @@ const Home = () => {
         </div>
       </div>
 
-      {/* 中间：人体模型区域 */}
-      <div className="bg-base-200 rounded-lg p-4 flex flex-col items-center justify-center shadow bg-gray-800 text-white">
-        {/* <h2 className="text-xl font-bold mb-4">中间容器</h2> */}
-        <div className="w-full h-full rounded flex items-center justify-center shadow-md">
-          {/* 这里放人体图/模型 */}
-          {/* public\Veins_Medical_Diagram_clip_art.svg */}
+      {/* 中间：人体模型区域 + AI分析 */}
+      <div className="bg-base-200 rounded-lg p-4 flex flex-col shadow bg-gray-800 text-white">
+        {/* 人体模型 */}
+        <div className="flex-1 rounded flex items-center justify-center shadow-md mb-4">
           <img
             src="/Veins_Medical_Diagram_clip_art.svg"
             alt="人体模型"
-            className="w-full h-auto"
+            className="w-full h-auto max-h-[400px] object-contain"
           />
         </div>
+        
+        {/* AI分析组件 */}
+        <AIAnalysis />
       </div>
 
       {/* 右侧：用户信息与总结 */}
