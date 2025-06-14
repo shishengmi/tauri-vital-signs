@@ -1966,6 +1966,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
 
 [[package]]
+name = "lttb"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "abfc750d3204167b4b1092f1c7ee3ddab3f3419627e2b0f8417bbdf2030b2448"
+
+[[package]]
 name = "mac"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3808,6 +3814,7 @@ name = "tauri-vital-signs"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "lttb",
  "serde",
  "serde_json",
  "serialport",
