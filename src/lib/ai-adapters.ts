@@ -1,4 +1,4 @@
-import { ChatModelAdapter } from "@assistant-ui/react";
+import { ChatModelAdapter} from "@assistant-ui/react";
 import OpenAI from "openai";
 import { AISettings } from "@/hooks/useAISettings";
 

@@ -3,6 +3,7 @@ import { LazyStore } from '@tauri-apps/plugin-store';
 
 // AI 设置接口
 export interface AISettings {
+  enableReasoning: boolean;
   activeProvider: 'openai' | 'ollama' | 'lmstudio' | '';
   openai: {
     apiKey: string;
@@ -25,6 +26,7 @@ export interface AISettings {
 // 默认设置
 const defaultSettings: AISettings = {
   activeProvider: 'openai',
+  enableReasoning: false, 
   openai: {
     apiKey: '',
     apiUrl: 'https://api.openai.com/v1',
@@ -56,18 +58,16 @@ export const useAISettings = () => {
   // 加载本地设置
   useEffect(() => {
     (async () => {
-      const saved = await store.get<AISettings>('aiSettings');
-      if (saved) {
-        setSettings(saved);
-      }
+      const saved = await store.get<AISettings>("aiSettings");
+      if (saved) setSettings({ ...defaultSettings, ...saved }); // 合并防止新字段缺失
       setInited(true);
     })();
   }, []);
 
-  // 保存设置到本地
-  const updateSettings = async (newSettings: AISettings) => {
-    setSettings(newSettings);
-    await store.set('aiSettings', newSettings);
+  /* ——— 更新并持久化配置 ——— */
+  const updateSettings = async (next: AISettings) => {
+    setSettings(next);
+    await store.set("aiSettings", next);
     await store.save();
   };
 
