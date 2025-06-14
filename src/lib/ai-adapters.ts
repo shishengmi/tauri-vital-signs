@@ -134,6 +134,7 @@ export const createLMStudioAdapter = (apiUrl: string, model: string): ChatModelA
       if (!reader) throw new Error("无法读取响应流");
 
       let text = "";
+      // let reasoning_text = "";
       const decoder = new TextDecoder();
 
       try {
@@ -155,7 +156,7 @@ export const createLMStudioAdapter = (apiUrl: string, model: string): ChatModelA
                 if (content) {
                   text += content;
                   yield {
-                    content: [{ type: "text", text }],
+                    content: [{ type: "reasoning", text }],
                   };
                 }
               } catch (e) {
