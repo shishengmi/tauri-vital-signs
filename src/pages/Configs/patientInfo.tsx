@@ -137,43 +137,43 @@ const PatientInfoConfig: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
+    <div className="max-w-4xl mx-auto p-6 space-y-6 bg-gray-50">
       {/* 消息提示 */}
       {message && (
         <div className={`p-4 rounded-lg border ${
           message.type === 'success' 
-            ? 'bg-green-900/20 border-green-500/30 text-green-400'
-            : 'bg-red-900/20 border-red-500/30 text-red-400'
+            ? 'bg-green-50 border-green-200 text-green-700'
+            : 'bg-red-50 border-red-200 text-red-700'
         }`}>
           {message.text}
         </div>
       )}
 
       {/* 基本信息 */}
-      <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+      <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
         <div className="flex items-center gap-3 mb-6">
-          <User className="w-6 h-6 text-blue-400" />
-          <h2 className="text-xl font-bold text-white">基本信息</h2>
+          <User className="w-6 h-6 text-blue-600" />
+          <h2 className="text-xl font-bold text-gray-800">基本信息</h2>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">姓名</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">姓名</label>
             <input
               type="text"
               value={patientInfo.name}
               onChange={(e) => setPatientInfo(prev => ({ ...prev, name: e.target.value }))}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="请输入患者姓名"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">性别</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">性别</label>
             <select
               value={patientInfo.gender}
               onChange={(e) => setPatientInfo(prev => ({ ...prev, gender: e.target.value as "男" | "女" }))}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="男">男</option>
               <option value="女">女</option>
@@ -181,12 +181,12 @@ const PatientInfoConfig: React.FC = () => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">年龄</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">年龄</label>
             <input
               type="number"
               value={patientInfo.age || ''}
               onChange={(e) => setPatientInfo(prev => ({ ...prev, age: parseInt(e.target.value) || 0 }))}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="年龄"
               min="0"
               max="150"
@@ -194,11 +194,11 @@ const PatientInfoConfig: React.FC = () => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">血型</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">血型</label>
             <select
               value={patientInfo.blood_type}
               onChange={(e) => setPatientInfo(prev => ({ ...prev, blood_type: e.target.value }))}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="A">A型</option>
               <option value="B">B型</option>
@@ -211,20 +211,20 @@ const PatientInfoConfig: React.FC = () => {
       </div>
 
       {/* 体征信息 */}
-      <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+      <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
         <div className="flex items-center gap-3 mb-6">
-          <Heart className="w-6 h-6 text-red-400" />
-          <h2 className="text-xl font-bold text-white">体征信息</h2>
+          <Heart className="w-6 h-6 text-red-600" />
+          <h2 className="text-xl font-bold text-gray-800">体征信息</h2>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">身高 (cm)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">身高 (cm)</label>
             <input
               type="number"
               value={patientInfo.height || ''}
               onChange={(e) => setPatientInfo(prev => ({ ...prev, height: parseFloat(e.target.value) || 0 }))}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="身高"
               min="0"
               max="300"
@@ -233,12 +233,12 @@ const PatientInfoConfig: React.FC = () => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">体重 (kg)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">体重 (kg)</label>
             <input
               type="number"
               value={patientInfo.weight || ''}
               onChange={(e) => setPatientInfo(prev => ({ ...prev, weight: parseFloat(e.target.value) || 0 }))}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="体重"
               min="0"
               max="500"
@@ -249,41 +249,41 @@ const PatientInfoConfig: React.FC = () => {
       </div>
 
       {/* 联系信息 */}
-      <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+      <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
         <div className="flex items-center gap-3 mb-6">
-          <Phone className="w-6 h-6 text-green-400" />
-          <h2 className="text-xl font-bold text-white">联系信息</h2>
+          <Phone className="w-6 h-6 text-green-600" />
+          <h2 className="text-xl font-bold text-gray-800">联系信息</h2>
         </div>
         
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">电话号码</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">电话号码</label>
             <input
               type="tel"
               value={patientInfo.phone}
               onChange={(e) => setPatientInfo(prev => ({ ...prev, phone: e.target.value }))}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="请输入电话号码"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">紧急联系人</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">紧急联系人</label>
             <input
               type="text"
               value={patientInfo.emergency_contact}
               onChange={(e) => setPatientInfo(prev => ({ ...prev, emergency_contact: e.target.value }))}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="紧急联系人姓名和电话"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">地址</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">地址</label>
             <textarea
               value={patientInfo.address}
               onChange={(e) => setPatientInfo(prev => ({ ...prev, address: e.target.value }))}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="请输入详细地址"
               rows={3}
             />
@@ -292,27 +292,27 @@ const PatientInfoConfig: React.FC = () => {
       </div>
 
       {/* 医疗信息 */}
-      <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+      <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
         <div className="flex items-center gap-3 mb-6">
-          <AlertTriangle className="w-6 h-6 text-yellow-400" />
-          <h2 className="text-xl font-bold text-white">医疗信息</h2>
+          <AlertTriangle className="w-6 h-6 text-yellow-600" />
+          <h2 className="text-xl font-bold text-gray-800">医疗信息</h2>
         </div>
         
         {/* 过敏史 */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-300 mb-2">过敏史</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">过敏史</label>
           <div className="flex gap-2 mb-2">
             <input
               type="text"
               value={newAllergy}
               onChange={(e) => setNewAllergy(e.target.value)}
-              className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="添加过敏物质"
               onKeyPress={(e) => e.key === 'Enter' && addAllergy()}
             />
             <button
               onClick={addAllergy}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2"
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               添加
@@ -320,11 +320,11 @@ const PatientInfoConfig: React.FC = () => {
           </div>
           <div className="flex flex-wrap gap-2">
             {patientInfo.allergies.map((allergy, index) => (
-              <span key={index} className="bg-red-500/20 text-red-300 px-3 py-1 rounded-full text-sm flex items-center gap-2">
+              <span key={index} className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm flex items-center gap-2">
                 {allergy}
                 <button
                   onClick={() => removeAllergy(index)}
-                  className="hover:text-red-100"
+                  className="hover:text-red-900"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -335,19 +335,19 @@ const PatientInfoConfig: React.FC = () => {
         
         {/* 病史 */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-300 mb-2">病史</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">病史</label>
           <div className="flex gap-2 mb-2">
             <input
               type="text"
               value={newMedicalHistory}
               onChange={(e) => setNewMedicalHistory(e.target.value)}
-              className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="添加病史记录"
               onKeyPress={(e) => e.key === 'Enter' && addMedicalHistory()}
             />
             <button
               onClick={addMedicalHistory}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2"
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               添加
@@ -355,11 +355,11 @@ const PatientInfoConfig: React.FC = () => {
           </div>
           <div className="space-y-2">
             {patientInfo.medical_history.map((history, index) => (
-              <div key={index} className="bg-yellow-500/20 text-yellow-200 px-3 py-2 rounded-lg text-sm flex items-center justify-between">
+              <div key={index} className="bg-yellow-100 text-yellow-800 px-3 py-2 rounded-lg text-sm flex items-center justify-between">
                 <span>{history}</span>
                 <button
                   onClick={() => removeMedicalHistory(index)}
-                  className="hover:text-yellow-100"
+                  className="hover:text-yellow-900"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -370,12 +370,12 @@ const PatientInfoConfig: React.FC = () => {
         
         {/* 最后检查时间 */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">最后检查时间</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">最后检查时间</label>
           <input
             type="datetime-local"
             value={patientInfo.last_checkup}
             onChange={(e) => setPatientInfo(prev => ({ ...prev, last_checkup: e.target.value }))}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
       </div>
@@ -385,7 +385,7 @@ const PatientInfoConfig: React.FC = () => {
         <button
           onClick={savePatientInfo}
           disabled={loading}
-          className="flex-1 py-3 px-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-medium rounded-lg transition-all duration-200 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="flex-1 py-3 px-6 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:from-gray-300 disabled:to-gray-400 text-white font-medium rounded-lg transition-all duration-200 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           <Save className="w-5 h-5" />
           {loading ? '保存中...' : '保存信息'}
@@ -394,7 +394,7 @@ const PatientInfoConfig: React.FC = () => {
         <button
           onClick={deletePatientInfo}
           disabled={loading}
-          className="py-3 px-6 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white font-medium rounded-lg transition-all duration-200 disabled:cursor-not-allowed flex items-center gap-2"
+          className="py-3 px-6 bg-red-500 hover:bg-red-600 disabled:bg-gray-300 text-white font-medium rounded-lg transition-all duration-200 disabled:cursor-not-allowed flex items-center gap-2"
         >
           <Trash2 className="w-5 h-5" />
           删除信息
