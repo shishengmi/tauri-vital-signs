@@ -1,303 +1,352 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { useVitalSigns } from '@/hooks/useVitalSigns';
 
+// 定义LTTB数据点接口
 interface LttbDataPoint {
   x: number;
   y: number;
 }
 
+// 组件属性接口
 interface ECGCanvasProps {
-  width?: number;
-  height?: number;
-  scrollSpeed?: number;
-  timeWindow?: number;
+  className?: string;
+  refreshInterval?: number;
+  pointSpace?: number;
+  refreshBlockWidth?: number;
+  minValue?: number;
+  maxValue?: number;
 }
 
+/**
+ * ECG心电图画布组件
+ * 参考ECG.vue实现，使用双画布分层设计
+ */
 const ECG_Canvas: React.FC<ECGCanvasProps> = ({
-  width = 800,
-  height = 300,
-  scrollSpeed = 100,
-  timeWindow = 10
+  className = '',
+  refreshInterval = 50,
+  pointSpace = 2,
+  refreshBlockWidth = 20,
+  minValue = 110000,
+  maxValue = 160000
 }) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const animationRef = useRef<number>();
-  const lastTimeRef = useRef<number>(0);
-  const scrollOffsetRef = useRef<number>(0);
+  const canvasRootRef = useRef<HTMLDivElement>(null);
+  const gridCanvasRef = useRef<HTMLCanvasElement>(null);
+  const ekgCanvasRef = useRef<HTMLCanvasElement>(null);
+  const sweepCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [canvasWidth, setCanvasWidth] = useState(0);
+  const [canvasHeight, setCanvasHeight] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [heartRate, setHeartRate] = useState(70);
+  
+  // ECG数据队列
+  const ecgDataQueue = useRef<number[]>([]);
+  const offsetRef = useRef(2);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const sweepPositionRef = useRef(0);
 
-  // 调试相关状态
-  const debugInfoRef = useRef({
-    frameCount: 0,
-    lastFpsUpdate: 0,
-    fps: 0,
-    dataFetchCount: 0,
-    lastDataFetch: 0,
-    renderTime: 0,
-    dataProcessingTime: 0
-  });
-
-  // 数据状态
-  const [ecgData, setEcgData] = useState<LttbDataPoint[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
-  const [dataStats, setDataStats] = useState({ points: 0, compressionRatio: 0 });
-
-  // 获取实时数据状态
-  const { data: vitalSigns, isLoading, error } = useVitalSigns(50);
-
-  // 画布样式配置 - 移到组件外部避免重新创建
-  const configRef = useRef({
-    bgColor: '#0a0a0a',
-    gridColor: '#1a4a1a',
-    waveColor: '#00ff41',
-    alertColor: '#ff4444',
-    textColor: '#ffffff',
-    gridMajorColor: '#2a5a2a',
-    sweepLineColor: '#ffff00'
-  });
-
-  // 获取LTTB压缩数据 - 稳定化函数引用
-  const fetchLttbData = useCallback(async () => {
-    const startTime = performance.now();
-    try {
-      const compressedData: LttbDataPoint[] = await invoke('get_lttb_compressed_data');
-      const fetchTime = performance.now() - startTime;
-
-      debugInfoRef.current.dataFetchCount++;
-      debugInfoRef.current.lastDataFetch = Date.now();
-      debugInfoRef.current.dataProcessingTime = fetchTime;
-
-      if (compressedData.length > 0) {
-        setEcgData(compressedData);
-        setIsConnected(true);
-
-        const newStats = {
-          points: compressedData.length,
-          compressionRatio: compressedData.length > 0 ? 1000 / compressedData.length : 0
-        };
-        setDataStats(newStats);
-      } else {
-        setIsConnected(false);
-      }
-    } catch (err) {
-      setIsConnected(false);
-    }
+  // 设置画布尺寸
+  const setCanvasSize = useCallback(() => {
+    if (!canvasRootRef.current) return;
+    const { width, height } = canvasRootRef.current.getBoundingClientRect();
+    setCanvasWidth(Math.floor(width));
+    setCanvasHeight(Math.floor(height));
   }, []);
 
-  // 绘制函数 - 使用useCallback稳定引用
-  const drawGrid = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number) => {
-    const config = configRef.current;
-    ctx.strokeStyle = config.gridMajorColor;
+  // 绘制网格
+  const drawGrid = useCallback((ctx: CanvasRenderingContext2D) => {
+    ctx.strokeStyle = '#0a4a2a';
     ctx.lineWidth = 1;
-    for (let y = 0; y <= h; y += 50) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
-    }
-    for (let x = 0; x <= w; x += 100) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, h);
-      ctx.stroke();
-    }
-    ctx.strokeStyle = config.gridColor;
-    ctx.lineWidth = 0.5;
-    for (let y = 0; y <= h; y += 10) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
-    }
-    for (let x = 0; x <= w; x += 20) {
+    const cellWidth = 40;
+    const cellHeight = 20;
+    const width = canvasWidth;
+    const height = canvasHeight;
+    const cols = Math.floor(width / cellWidth);
+    const rows = Math.floor(height / cellHeight);
+
+    // 绘制垂直线
+    for (let col = 0; col <= cols; col++) {
+      let x = col * cellWidth;
+      if (col === cols) {
+        x -= cellWidth * 0.3;
+      }
       ctx.beginPath();
       ctx.moveTo(x, 0);
-      ctx.lineTo(x, h);
+      ctx.lineTo(x, height);
       ctx.stroke();
     }
-    ctx.strokeStyle = config.gridMajorColor;
+
+    // 绘制水平线
+    for (let row = 0; row <= rows; row++) {
+      let y = row * cellHeight;
+      if (row === rows) {
+        y -= cellHeight * 0.3;
+      }
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.stroke();
+  }, [canvasWidth, canvasHeight]);
+
+  // 绘制扫描线
+  const drawSweepLine = useCallback((ctx: CanvasRenderingContext2D) => {
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    ctx.strokeStyle = '#ffff00';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(0, h / 2);
-    ctx.lineTo(w, h / 2);
+    ctx.moveTo(sweepPositionRef.current, 0);
+    ctx.lineTo(sweepPositionRef.current, canvasHeight);
     ctx.stroke();
+    
+    // 更新扫描线位置
+    sweepPositionRef.current += 2;
+    if (sweepPositionRef.current > canvasWidth) {
+      sweepPositionRef.current = 0;
+    }
+  }, [canvasWidth, canvasHeight]);
+
+  // 绘制ECG数据点
+  const drawEKGPoint = useCallback((ctx: CanvasRenderingContext2D, num: number) => {
+    const canvasRange = canvasHeight;
+    const maxOffset = canvasWidth / pointSpace;
+    ctx.strokeStyle = '#00ff00';
+    ctx.lineWidth = 2;
+
+    // 限制数值范围
+    if (num > maxValue) num = maxValue;
+    if (num < minValue) num = minValue;
+
+    // 将num值从[minValue, maxValue]范围映射到[canvasHeight, 0]范围
+    const scaledNum = ((num - minValue) / (maxValue - minValue)) * canvasRange;
+    // Y坐标调整，使数值小的在画布下方，数值大的在画布上方
+    const yPos = canvasHeight - scaledNum;
+
+    // 清除即将更新的区域
+    ctx.clearRect(offsetRef.current * pointSpace, 0, refreshBlockWidth, canvasHeight);
+    offsetRef.current += 4;
+    ctx.lineTo(offsetRef.current * pointSpace, yPos);
+    ctx.stroke();
+
+    // 重置偏移量
+    if (offsetRef.current > maxOffset) {
+      offsetRef.current = 2;
+      ctx.beginPath();
+    }
+  }, [canvasHeight, canvasWidth, pointSpace, refreshBlockWidth, minValue, maxValue]);
+
+  // 获取ECG数据
+  const fetchECGData = useCallback(async () => {
+    try {
+      const data = await invoke<LttbDataPoint[]>('get_lttb_compressed_data');
+      if (data && data.length > 0) {
+        // 将LTTB数据转换为原始ECG数值
+        const rawValues = data.map(point => {
+          // 将归一化的y值(-1到1)转换回原始范围
+          return minValue + (point.y + 1) * (maxValue - minValue) / 2;
+        });
+        ecgDataQueue.current.push(...rawValues);
+        setError(null);
+        
+        // 模拟心率计算
+        setHeartRate(Math.floor(Math.random() * 20) + 60);
+      }
+    } catch (err) {
+      console.error('获取ECG数据失败:', err);
+      setError(err instanceof Error ? err.message : '获取数据失败');
+    }
+  }, [minValue, maxValue]);
+
+  // 处理窗口大小变化
+  const handleResize = useCallback(() => {
+    setCanvasSize();
+    const gridCtx = gridCanvasRef.current?.getContext('2d');
+    const ekgCtx = ekgCanvasRef.current?.getContext('2d');
+    
+    setTimeout(() => {
+      if (!gridCtx || !ekgCtx) return;
+      gridCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+      ekgCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+      drawGrid(gridCtx);
+    }, 0);
+  }, [setCanvasSize, canvasWidth, canvasHeight, drawGrid]);
+
+  // 开始/停止监测
+  const toggleMonitoring = useCallback(() => {
+    setIsRunning(prev => !prev);
   }, []);
 
-  const drawECGWave = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number, data: LttbDataPoint[]) => {
-    if (data.length < 2) {
+  // 清空数据
+  const clearData = useCallback(() => {
+    ecgDataQueue.current = [];
+    offsetRef.current = 2;
+    const ekgCtx = ekgCanvasRef.current?.getContext('2d');
+    if (ekgCtx) {
+      ekgCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+    }
+  }, [canvasWidth, canvasHeight]);
+
+  // 初始化画布
+  useEffect(() => {
+    setCanvasSize();
+    const gridCtx = gridCanvasRef.current?.getContext('2d');
+    const ekgCtx = ekgCanvasRef.current?.getContext('2d');
+
+    setTimeout(() => {
+      if (!gridCtx || !ekgCtx) return;
+      drawGrid(gridCtx);
+    }, 0);
+
+    // 监听窗口大小变化
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [drawGrid, handleResize]);
+
+  // 数据获取定时器
+  useEffect(() => {
+    if (!isRunning) return;
+
+    const fetchInterval = setInterval(fetchECGData, 1000); // 每秒获取一次新数据
+    return () => clearInterval(fetchInterval);
+  }, [isRunning, fetchECGData]);
+
+  // ECG绘制定时器
+  useEffect(() => {
+    if (!isRunning) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
       return;
     }
 
-    const drawStartTime = performance.now();
-    const config = configRef.current;
-    const pixelsPerSecond = scrollSpeed;
-    const centerY = h / 2;
-    const amplitudeScale = h * 0.3;
+    const ekgCtx = ekgCanvasRef.current?.getContext('2d');
+    const sweepCtx = sweepCanvasRef.current?.getContext('2d');
+    if (!ekgCtx || !sweepCtx) return;
 
-    ctx.strokeStyle = config.waveColor;
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    let pathStarted = false;
-    let visiblePoints = 0;
-
-    if (data.length === 0) return;
-
-    const dataStartTime = Math.min(...data.map(p => p.x));
-    const dataEndTime = Math.max(...data.map(p => p.x));
-    const dataTimeSpan = dataEndTime - dataStartTime;
-    const useRelativeTime = dataTimeSpan < timeWindow * 1000;
-
-    for (let i = 0; i < data.length - 1; i++) {
-      const point = data[i];
-      const nextPoint = data[i + 1];
-      let x1, x2;
-      if (useRelativeTime) {
-        const relativePos1 = (point.x - dataStartTime) / dataTimeSpan;
-        const relativePos2 = (nextPoint.x - dataStartTime) / dataTimeSpan;
-        x1 = relativePos1 * w;
-        x2 = relativePos2 * w;
-      } else {
-        const currentTime = Date.now();
-        const timeWindowMs = timeWindow * 1000;
-        const startTime = currentTime - timeWindowMs;
-        if (point.x < startTime) continue;
-        const relativeTime = (point.x - startTime) / 1000;
-        const nextRelativeTime = (nextPoint.x - startTime) / 1000;
-        x1 = relativeTime * pixelsPerSecond;
-        x2 = nextRelativeTime * pixelsPerSecond;
+    intervalRef.current = setInterval(() => {
+      if (ecgDataQueue.current.length > 0) {
+        const num = ecgDataQueue.current.shift() as number;
+        drawEKGPoint(ekgCtx, num);
       }
-      const y1 = centerY - (point.y * amplitudeScale);
-      const y2 = centerY - (nextPoint.y * amplitudeScale);
-      if ((x1 >= -50 && x1 <= w + 50) || (x2 >= -50 && x2 <= w + 50)) {
-        if (!pathStarted) {
-          ctx.moveTo(x1, y1);
-          pathStarted = true;
-        }
-        ctx.lineTo(x2, y2);
-        visiblePoints++;
-      }
-    }
-    ctx.stroke();
+      // 绘制扫描线
+      drawSweepLine(sweepCtx);
+    }, refreshInterval);
 
-    const drawTime = performance.now() - drawStartTime;
-    debugInfoRef.current.renderTime = drawTime;
-  }, [scrollSpeed, timeWindow]);
-
-  const drawSweepLine = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number, scrollOffset: number) => {
-    const config = configRef.current;
-    const sweepX = (scrollOffset % w);
-    ctx.strokeStyle = config.sweepLineColor;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(sweepX, 0);
-    ctx.lineTo(sweepX, h);
-    ctx.stroke();
-    const clearWidth = 20;
-    ctx.fillStyle = config.bgColor;
-    ctx.fillRect(sweepX + 2, 0, clearWidth, h);
-  }, []);
-
-  const drawStatusInfo = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number,
-    connectionStatus: boolean, stats: typeof dataStats, vitals: typeof vitalSigns,
-    _loadingStatus: boolean, errorMsg: string | null) => {
-    const config = configRef.current;
-    ctx.fillStyle = config.textColor;
-    ctx.font = '12px Arial';
-    const statusText = connectionStatus ? '已连接' : '未连接';
-    const statusColor = connectionStatus ? config.waveColor : config.alertColor;
-    ctx.fillStyle = statusColor;
-    ctx.fillText(`状态: ${statusText}`, 10, 20);
-    ctx.fillStyle = config.textColor;
-    ctx.fillText(`数据点: ${stats.points}`, 10, 40);
-    ctx.fillText(`压缩比: ${stats.compressionRatio.toFixed(1)}:1`, 10, 60);
-    if (vitals) {
-      ctx.fillText(`心率: ${vitals.heart_rate.toFixed(1)} bpm`, 10, 80);
-      ctx.fillText(`RR间隔: ${vitals.rr_interval.toFixed(3)} s`, 10, 100);
-    }
-    ctx.fillText(`FPS: ${debugInfoRef.current.fps}`, 10, 120);
-    ctx.fillText(`渲染时间: ${debugInfoRef.current.renderTime.toFixed(1)}ms`, 10, 140);
-    ctx.fillText(`滚动速度: ${scrollSpeed} px/s`, 10, h - 60);
-    ctx.fillText(`时间窗口: ${timeWindow} s`, 10, h - 40);
-    if (errorMsg) {
-      ctx.fillStyle = config.alertColor;
-      ctx.fillText(`错误: ${errorMsg}`, w - 200, h - 20);
-    }
-  }, [scrollSpeed, timeWindow]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchLttbData();
-    }, 100);
     return () => {
-      clearInterval(interval);
-    };
-  }, [fetchLttbData]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    canvas.width = width;
-    canvas.height = height;
-
-    const animate = (currentTime: number) => {
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      debugInfoRef.current.frameCount++;
-      if (currentTime - debugInfoRef.current.lastFpsUpdate >= 1000) {
-        debugInfoRef.current.fps = Math.round(debugInfoRef.current.frameCount * 1000 / (currentTime - debugInfoRef.current.lastFpsUpdate));
-        debugInfoRef.current.frameCount = 0;
-        debugInfoRef.current.lastFpsUpdate = currentTime;
-      }
-      const deltaTime = currentTime - lastTimeRef.current;
-      lastTimeRef.current = currentTime;
-      scrollOffsetRef.current += (scrollSpeed * deltaTime) / 1000;
-      const renderStartTime = performance.now();
-      ctx.fillStyle = configRef.current.bgColor;
-      ctx.fillRect(0, 0, width, height);
-      drawGrid(ctx, width, height);
-      drawECGWave(ctx, width, height, ecgData);
-      drawSweepLine(ctx, width, height, scrollOffsetRef.current);
-      drawStatusInfo(ctx, width, height, isConnected, dataStats, vitalSigns, isLoading, error);
-      debugInfoRef.current.renderTime = performance.now() - renderStartTime;
-      animationRef.current = requestAnimationFrame(animate);
-    };
-    lastTimeRef.current = performance.now();
-    debugInfoRef.current.lastFpsUpdate = performance.now();
-    animationRef.current = requestAnimationFrame(animate);
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
-  }, [width, height, scrollSpeed, drawGrid, drawECGWave, drawSweepLine, drawStatusInfo]);
-
-  useEffect(() => {
-    // 数据变化监听，不再打印日志
-  }, [vitalSigns]);
-
-  useEffect(() => {
-    // 连接状态变化监听，不再打印日志
-  }, [isConnected, ecgData.length, dataStats.compressionRatio]);
+  }, [isRunning, refreshInterval, drawEKGPoint, drawSweepLine]);
 
   return (
-    <div className="w-full h-full bg-gray-900 rounded-lg p-2">
-      <div className="border border-gray-600 rounded overflow-hidden" style={{ height: 'calc(100% - 60px)' }}>
-        <canvas
-          ref={canvasRef}
-          className="w-full h-full block"
-          style={{ backgroundColor: configRef.current.bgColor }}
-        />
-      </div>
-      <div className="mt-1 flex justify-between items-center text-xs text-gray-400">
-        <div className={`${isConnected ? 'text-green-400' : 'text-red-400'}`}>
-          {isConnected ? '已连接' : '未连接'}
-        </div>
-        {vitalSigns && (
-          <div className="text-green-400">
-            {vitalSigns.heart_rate.toFixed(0)} bpm
+    <div className={`w-full h-full bg-gray-900 text-green-400 font-mono ${className}`}>
+      <div className="flex h-full">
+        {/* 左侧参数面板 */}
+        <div className="w-48 bg-gray-800 border-r border-gray-600 p-4 flex flex-col justify-between">
+          {/* 上部参数 */}
+          <div className="space-y-4">
+            <div className="text-orange-400">
+              <div className="text-sm">体征参数</div>
+              <div className="text-xs mt-1">数据源: 0</div>
+              <div className="text-xs">区间值: 0.1</div>
+            </div>
+            
+            <div className="text-green-400">
+              <div className="text-sm">FPS: 165</div>
+              <div className="text-xs mt-1">速度时间: 0.3ms</div>
+            </div>
+            
+            <div className="text-green-400">
+              <div className="text-sm">测试速度: 100 px/s</div>
+              <div className="text-xs mt-1">时间周期: 10 s</div>
+            </div>
           </div>
-        )}
+          
+          {/* 控制按钮 */}
+          <div className="space-y-2">
+            <button
+              onClick={toggleMonitoring}
+              className={`w-full px-3 py-2 text-sm rounded ${
+                isRunning 
+                  ? 'bg-red-600 hover:bg-red-700 text-white' 
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
+            >
+              {isRunning ? '停止' : '开始'}
+            </button>
+            
+            <button
+              onClick={clearData}
+              className="w-full px-3 py-2 text-sm bg-gray-600 hover:bg-gray-700 text-white rounded"
+            >
+              清空
+            </button>
+          </div>
+        </div>
+
+        {/* 主显示区域 */}
+        <div className="flex-1 flex flex-col">
+          {/* ECG画布容器 */}
+          <div 
+            ref={canvasRootRef}
+            className="flex-1 relative bg-black border border-gray-600"
+          >
+            {/* 网格画布 */}
+            <canvas
+              ref={gridCanvasRef}
+              width={canvasWidth}
+              height={canvasHeight}
+              className="absolute left-0 top-0"
+            />
+            
+            {/* ECG数据画布 */}
+            <canvas
+              ref={ekgCanvasRef}
+              width={canvasWidth}
+              height={canvasHeight}
+              className="absolute left-0 top-0"
+            />
+            
+            {/* 扫描线画布 */}
+            <canvas
+              ref={sweepCanvasRef}
+              width={canvasWidth}
+              height={canvasHeight}
+              className="absolute left-0 top-0"
+            />
+            
+            {/* 错误提示 */}
+            {error && (
+              <div className="absolute top-4 left-4 bg-red-900 border border-red-700 rounded px-3 py-2">
+                <p className="text-red-300 text-sm">错误: {error}</p>
+              </div>
+            )}
+          </div>
+
+          {/* 底部状态栏 */}
+          <div className="h-16 bg-gray-800 border-t border-gray-600 flex items-center justify-between px-6">
+            <div className="flex items-center space-x-4">
+              <span className={`text-lg font-bold ${
+                isRunning ? 'text-green-400' : 'text-red-400'
+              }`}>
+                {isRunning ? '已连接' : '未连接'}
+              </span>
+            </div>
+            
+            <div className="text-right">
+              <div className="text-2xl font-bold text-green-400">
+                {heartRate} bpm
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
