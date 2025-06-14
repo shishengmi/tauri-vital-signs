@@ -27,64 +27,72 @@ const ECG_Data: React.FC = () => {
 
   // 准备显示数据
   const displayData = React.useMemo(() => {
-    if (!data) return [];
+    // 始终返回固定的数据结构，只是数值部分根据数据状态变化
+    const hasValidData = data && !isLoading && !error;
     
-    const calculatedRRInterval = calculateRRInterval(data.heart_rate);
-    
-    return [
-      {
-        label: "心率",
-        value: formatValue(data.heart_rate, 0),
-        unit: "bpm"
-      },
-      {
-        label: "心率变异性",
-        value: formatValue(calculateHRV(calculatedRRInterval), 1),
-        unit: "ms"
-      },
-      {
-        label: "RR间隔",
-        value: formatValue(calculatedRRInterval, 1),
-        unit: "ms"
-      }
-    ];
-  }, [data]);
+    if (hasValidData) {
+      const calculatedRRInterval = calculateRRInterval(data.heart_rate);
+      
+      return [
+        {
+          label: "心率",
+          value: formatValue(data.heart_rate, 0),
+          unit: "bpm"
+        },
+        {
+          label: "心率变异性",
+          value: formatValue(calculateHRV(calculatedRRInterval), 1),
+          unit: "ms"
+        },
+        {
+          label: "RR间隔",
+          value: formatValue(calculatedRRInterval, 1),
+          unit: "ms"
+        }
+      ];
+    } else {
+      // 没有数据时，显示固定标签和单位，但数值为"--"
+      return [
+        {
+          label: "心率",
+          value: "--",
+          unit: "bpm"
+        },
+        {
+          label: "心率变异性",
+          value: "--",
+          unit: "ms"
+        },
+        {
+          label: "RR间隔",
+          value: "--",
+          unit: "ms"
+        }
+      ];
+    }
+  }, [data, isLoading, error]);
 
   return (
     <div className="flex-1 flex flex-col p-4">
       {/* 数据显示 */}
-      {isLoading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-gray-400">--</div>
-        </div>
-      ) : error ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-gray-400">--</div>
-        </div>
-      ) : displayData.length > 0 ? (
-        <div className="flex-1 flex flex-col justify-center space-y-6">
-          {displayData.map((item, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between px-2"
-            >
-              <div className="text-base font-medium text-gray-300 w-20 text-left">
-                {item.label}
-              </div>
-              <div className="text-4xl font-bold text-blue-400 flex-1 text-center">
-                {item.value}
-              </div>
-              <div className="text-base font-medium text-gray-300 w-12 text-right">
-                {item.unit}
-              </div>
+      <div className="flex-1 flex flex-col justify-center space-y-6">
+        {displayData.map((item, index) => (
+          <div
+            key={index}
+            className="flex items-center justify-between px-2"
+          >
+            <div className="text-base font-medium text-gray-300 w-20 text-left">
+              {item.label}
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-gray-400">--</div>
-        </div>
-      )}
+            <div className="text-4xl font-bold text-blue-400 flex-1 text-center">
+              {item.value}
+            </div>
+            <div className="text-base font-medium text-gray-300 w-12 text-right">
+              {item.unit}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

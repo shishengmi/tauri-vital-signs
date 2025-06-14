@@ -52,7 +52,7 @@ const Home = () => {
         </div>
         <div className="p-4 rounded shadow-md flex-1 flex flex-col gap-2 bg-gray-900">
           <div className="flex gap-2 flex-1 bg-gray-900">
-            {/* <ECG_Data></ECG_Data> */}
+            <ECG_Data></ECG_Data>
           </div>
         </div>
       </div>
@@ -94,11 +94,17 @@ const Home = () => {
             <PatientInfo />
           )}
         </div>
-        <div className="bg-base-100 p-4 rounded shadow-md flex-1 bg-gray-900"><BloodPressure /></div>
-        <div className="bg-base-100 p-4 rounded shadow-md flex bg-gray-900">
-          <div className="w-1/2 "><BodyTemperature></BodyTemperature></div>
-          <div className="w-1/2 "><BloodOxygen></BloodOxygen></div>
+        {/* 体温和血氧组件 - 优化布局 */}
+        <div className="flex gap-4 flex-[1.5]">
+          <div className="bg-base-100 bg-gray-900 rounded shadow-md flex-1 flex items-center justify-center">
+            <BodyTemperature></BodyTemperature>
+          </div>
+          <div className="bg-base-100 bg-gray-900 rounded shadow-md flex-1 flex items-center justify-center">
+            <BloodOxygen></BloodOxygen>
+          </div>
         </div>
+        {/* 血压组件 - 占比较小 */}
+        <div className="bg-base-100 p-4 rounded shadow-md flex-1 bg-gray-900"><BloodPressure /></div>
       </div>
       
       {/* AI助手悬浮组件 */}

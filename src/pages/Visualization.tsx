@@ -41,11 +41,17 @@ const Visualization = () => {
       <div className="bg-base-200 rounded-lg p-4 flex flex-col gap-4 shadow">
         {/* <h2 className="text-xl font-bold">用户信息</h2> */}
         <div className="bg-base-100 p-4 rounded shadow-md flex-1"><PatientInfo name="张三" gender="男" age={45} height={172} weight={68} /></div>
-        <div className="bg-base-100 p-4 rounded shadow-md flex-1"><BloodPressure /></div>
-        <div className="bg-base-100 p-4 rounded shadow-md flex">
-          <div className="w-1/2 "><BodyTemperature></BodyTemperature></div>
-          <div className="w-1/2 "><BloodOxygen></BloodOxygen></div>
+        {/* 体温和血氧组件 - 优化布局 */}
+        <div className="flex gap-4 flex-[1.5]">
+          <div className="bg-base-100 rounded shadow-md flex-1 flex items-center justify-center">
+            <BodyTemperature></BodyTemperature>
+          </div>
+          <div className="bg-base-100 rounded shadow-md flex-1 flex items-center justify-center">
+            <BloodOxygen></BloodOxygen>
+          </div>
         </div>
+        {/* 血压组件 - 占比较小 */}
+        <div className="bg-base-100 p-4 rounded shadow-md flex-1"><BloodPressure /></div>
       </div>
     </div>
   );
