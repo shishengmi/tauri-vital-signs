@@ -5,6 +5,7 @@ import BodyTemperature from "../components/Visualization/BodyTemperature";
 import ECG_Canvas from "../components/Visualization/ECG_Canvas";
 import Evaluate from "../components/Visualization/Evaluate";
 import PatientInfo from "../components/Visualization/PatientInfo";
+import Assistant from "../components/Assistant";
 
 const Home = () => {
   return (
@@ -49,6 +50,9 @@ const Home = () => {
           <div className="w-1/2 "><BloodOxygen></BloodOxygen></div>
         </div>
       </div>
+      
+      {/* AI助手悬浮组件 */}
+      <Assistant />
     </div>
   ); 
 };

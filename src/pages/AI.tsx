@@ -43,7 +43,7 @@ const OpenAIAdapter: ChatModelAdapter = {
   },
 };
 
-const Testpage = () => {
+const AIpage = () => {
   const runtime = useLocalRuntime(OpenAIAdapter);
 
   return (
@@ -56,4 +56,4 @@ const Testpage = () => {
   );
 };
 
-export default Testpage;
+export default AIpage;

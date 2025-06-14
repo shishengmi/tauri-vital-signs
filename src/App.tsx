@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom'
 import Home from './pages/Home'
 import Contact from './pages/Contact'
 import Config from './pages/Config'
+import AI from './pages/AI'
 import { SimpleSidebar } from './components/SimpleSidebar'
 import { StatusBar } from './components/StatusBar'
 import PatientInfo from './pages/Configs/patientInfo'
@@ -14,6 +15,7 @@ export default function App() {
       <div className="flex-1 h-full ml-12 pb-6">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/ai" element={<AI />} />
           <Route path="/config" element={<Config />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/test/patientInfo" element={<PatientInfo />} />

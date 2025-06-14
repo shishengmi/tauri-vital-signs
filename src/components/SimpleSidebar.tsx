@@ -1,4 +1,4 @@
-import { Home, User,Settings } from "lucide-react"
+import { Home, User, Settings, Bot } from "lucide-react"
 import { TooltipIconButton } from "./tooltip-icon-button"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Link } from "react-router-dom"
@@ -8,6 +8,12 @@ const sidebarItems = [
     icon: Home,
     tooltip: "首页",
     href: "/",
+    type: "link" as const
+  },
+  {
+    icon: Bot,
+    tooltip: "AI助手",
+    href: "/ai",
     type: "link" as const
   },
   {
