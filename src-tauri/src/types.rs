@@ -151,9 +151,9 @@ pub type ProcessedDataQueue = Arc<Mutex<VecDeque<ProcessedVitalSigns>>>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
 pub enum SerialStatus {
-    Connected(String),  // 包含串口名
+    Connected(String), // 包含串口名
     Disconnected,
-    Error(String),      // 包含错误信息
+    Error(String), // 包含错误信息
 }
 
 /// 数据处理状态枚举

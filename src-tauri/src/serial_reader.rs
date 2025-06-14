@@ -12,7 +12,10 @@ pub struct SerialReader {
 
 impl SerialReader {
     pub fn new(config: SerialConfig, data_queue: DataQueue) -> Self {
-        println!("[SerialReader] 初始化，串口={}, 波特率={}", config.port_name, config.baud_rate);
+        println!(
+            "[SerialReader] 初始化，串口={}, 波特率={}",
+            config.port_name, config.baud_rate
+        );
         Self {
             config,
             data_queue,
@@ -72,7 +75,10 @@ impl SerialReader {
     pub fn start(&self) -> Result<(), String> {
         self.test_connection()?;
 
-        println!("[SerialReader] 启动串口读取线程: {}, 波特率={}", self.config.port_name, self.config.baud_rate);
+        println!(
+            "[SerialReader] 启动串口读取线程: {}, 波特率={}",
+            self.config.port_name, self.config.baud_rate
+        );
         let port = serialport::new(&self.config.port_name, self.config.baud_rate)
             .timeout(Duration::from_millis(3000))
             .open()
@@ -115,9 +121,15 @@ impl SerialReader {
                     }
                     Err(e) => {
                         consecutive_errors += 1;
-                        eprintln!("[SerialReader][线程] 串口读取错误: {} (连续错误: {})", e, consecutive_errors);
+                        eprintln!(
+                            "[SerialReader][线程] 串口读取错误: {} (连续错误: {})",
+                            e, consecutive_errors
+                        );
                         if consecutive_errors >= MAX_CONSECUTIVE_ERRORS {
-                            eprintln!("[SerialReader][线程] 连续发生{}次错误，退出读取线程", MAX_CONSECUTIVE_ERRORS);
+                            eprintln!(
+                                "[SerialReader][线程] 连续发生{}次错误，退出读取线程",
+                                MAX_CONSECUTIVE_ERRORS
+                            );
                             break;
                         }
                         std::thread::sleep(Duration::from_millis(1000));

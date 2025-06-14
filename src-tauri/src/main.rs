@@ -3,18 +3,18 @@
     windows_subsystem = "windows"
 )]
 
+mod data_processor;
+mod patient_store;
 mod serial_manager;
 mod serial_reader;
 mod types;
-mod data_processor;
-mod patient_store;
 
-use serial_manager::SerialManager;
 use data_processor::DataProcessor;
-use patient_store::{PatientStore, PatientInfo};
+use patient_store::{PatientInfo, PatientStore};
+use serial_manager::SerialManager;
 use std::sync::Mutex;
-use tauri::{State, Manager}; // 添加 Manager 导入
-use types::{SerialConfig, SerialStatus, VitalSigns, ProcessedVitalSigns};
+use tauri::{Manager, State}; // 添加 Manager 导入
+use types::{ProcessedVitalSigns, SerialConfig, SerialStatus, VitalSigns};
 
 /// 全局串口管理器状态
 struct SerialManagerState(Mutex<SerialManager>);
@@ -57,21 +57,21 @@ fn connect_serial(
         port_name,
         baud_rate,
     };
-    
+
     // 连接串口
     serial_state.0.lock().unwrap().connect(config)?;
-    
+
     // 自动启动数据处理
     let serial_manager = serial_state.0.lock().unwrap();
     let data_queue = serial_manager.get_data_queue();
     drop(serial_manager); // 释放锁
-    
+
     let processor = DataProcessor::new(data_queue);
     processor.start();
-    
+
     let mut processor_guard = processor_state.0.lock().unwrap();
     *processor_guard = Some(processor);
-    
+
     println!("[Main] 串口连接成功，数据处理已自动启动");
     Ok(())
 }
@@ -90,7 +90,7 @@ fn disconnect_serial(
     }
     *processor_guard = None;
     drop(processor_guard);
-    
+
     // 断开串口连接
     serial_state.0.lock().unwrap().disconnect();
     println!("[Main] 串口连接已断开");
@@ -129,18 +129,18 @@ fn get_processed_data(count: usize, state: State<DataProcessorState>) -> Vec<Pro
 #[tauri::command]
 fn start_data_processing(
     serial_state: State<SerialManagerState>,
-    processor_state: State<DataProcessorState>
+    processor_state: State<DataProcessorState>,
 ) -> Result<(), String> {
     let serial_manager = serial_state.0.lock().unwrap();
     let data_queue = serial_manager.get_data_queue();
     drop(serial_manager);
-    
+
     let processor = DataProcessor::new(data_queue);
     processor.start();
-    
+
     let mut processor_guard = processor_state.0.lock().unwrap();
     *processor_guard = Some(processor);
-    
+
     Ok(())
 }
 
@@ -190,7 +190,6 @@ fn delete_patient_info(state: State<PatientStoreState>) -> Result<(), String> {
     }
 }
 
-
 /// 获取LTTB压缩后的ECG数据
 #[tauri::command]
 fn get_lttb_compressed_data(state: State<DataProcessorState>) -> Vec<types::LttbDataPoint> {
@@ -202,12 +201,12 @@ fn get_lttb_compressed_data(state: State<DataProcessorState>) -> Vec<types::Lttb
     }
 }
 
-
 fn main() {
     // 初始化串口管理器
     let serial_manager = SerialManager::new();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_store::Builder::new().build())
         .manage(SerialManagerState(Mutex::new(serial_manager)))
         .manage(DataProcessorState(Mutex::new(None)))
         .manage(PatientStoreState(Mutex::new(None)))
@@ -235,7 +234,7 @@ fn main() {
                     let patient_store_state = app.state::<PatientStoreState>();
                     *patient_store_state.0.lock().unwrap() = Some(patient_store);
                     println!("[Main] 患者存储初始化成功");
-                },
+                }
                 Err(e) => {
                     eprintln!("[Main] 患者存储初始化失败: {}", e);
                     // 可以选择继续运行或者退出应用

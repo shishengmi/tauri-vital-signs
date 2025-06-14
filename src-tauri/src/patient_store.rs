@@ -1,6 +1,6 @@
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -52,49 +52,46 @@ impl PatientStore {
             .path()
             .app_data_dir()
             .map_err(|e| format!("无法获取应用数据目录: {}", e))?;
-        
+
         let data_dir = app_data_dir.join("vital-signs");
         if !data_dir.exists() {
-            fs::create_dir_all(&data_dir)
-                .map_err(|e| format!("创建数据目录失败: {}", e))?;
+            fs::create_dir_all(&data_dir).map_err(|e| format!("创建数据目录失败: {}", e))?;
         }
-        
+
         let data_file = data_dir.join("patient_info.json");
-        
+
         Ok(Self { data_file })
     }
-    
+
     pub fn save_patient_info(&self, patient_info: &PatientInfo) -> Result<(), String> {
         let mut info = patient_info.clone();
         info.updated_at = chrono::Utc::now().to_rfc3339();
-        
+
         let json_data = serde_json::to_string_pretty(&info)
             .map_err(|e| format!("序列化患者信息失败: {}", e))?;
-        
-        fs::write(&self.data_file, json_data)
-            .map_err(|e| format!("保存患者信息失败: {}", e))?;
-        
+
+        fs::write(&self.data_file, json_data).map_err(|e| format!("保存患者信息失败: {}", e))?;
+
         Ok(())
     }
-    
+
     pub fn load_patient_info(&self) -> Result<PatientInfo, String> {
         if !self.data_file.exists() {
             return Ok(PatientInfo::default());
         }
-        
-        let json_data = fs::read_to_string(&self.data_file)
-            .map_err(|e| format!("读取患者信息失败: {}", e))?;
-        
-        let patient_info: PatientInfo = serde_json::from_str(&json_data)
-            .map_err(|e| format!("解析患者信息失败: {}", e))?;
-        
+
+        let json_data =
+            fs::read_to_string(&self.data_file).map_err(|e| format!("读取患者信息失败: {}", e))?;
+
+        let patient_info: PatientInfo =
+            serde_json::from_str(&json_data).map_err(|e| format!("解析患者信息失败: {}", e))?;
+
         Ok(patient_info)
     }
-    
+
     pub fn delete_patient_info(&self) -> Result<(), String> {
         if self.data_file.exists() {
-            fs::remove_file(&self.data_file)
-                .map_err(|e| format!("删除患者信息失败: {}", e))?;
+            fs::remove_file(&self.data_file).map_err(|e| format!("删除患者信息失败: {}", e))?;
         }
         Ok(())
     }

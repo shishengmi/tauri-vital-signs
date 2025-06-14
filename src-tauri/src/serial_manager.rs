@@ -33,10 +33,7 @@ impl SerialManager {
                 let port_name = p.port_name;
                 let port_type = match p.port_type {
                     SerialPortType::UsbPort(info) => {
-                        format!(
-                            "USB设备 (VID:{:04x} PID:{:04x})",
-                            info.vid, info.pid
-                        )
+                        format!("USB设备 (VID:{:04x} PID:{:04x})", info.vid, info.pid)
                     }
                     SerialPortType::PciPort => "PCI设备".to_string(),
                     SerialPortType::BluetoothPort => "蓝牙设备".to_string(),
