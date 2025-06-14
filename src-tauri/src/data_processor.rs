@@ -161,14 +161,14 @@ impl DataProcessor {
                     }
                     
                     // 输出处理后的数据到控制台（简化版）
-                    if consecutive_empty_count == 0 { // 只在重新开始处理时输出
-                        println!("[DataProcessor] ECG原始={}, 归一化={:.3}, 压缩点数={}, 体温={:.2}°C, 心率={:.1}bpm", 
-                                 processed.ecg_raw,
-                                 processed.ecg_normalized,
-                                 processed.ecg_lttb_compressed.len(),
-                                 processed.body_temperature, 
-                                 processed.heart_rate);
-                    }
+                    // if consecutive_empty_count == 0 { // 只在重新开始处理时输出
+                    //     println!("[DataProcessor] ECG原始={}, 归一化={:.3}, 压缩点数={}, 体温={:.2}°C, 心率={:.1}bpm", 
+                    //              processed.ecg_raw,
+                    //              processed.ecg_normalized,
+                    //              processed.ecg_lttb_compressed.len(),
+                    //              processed.body_temperature, 
+                    //              processed.heart_rate);
+                    // }
                     
                     // 存储处理后的数据
                     let mut processed_queue = processed_queue.lock().unwrap();
@@ -553,20 +553,20 @@ impl DataProcessor {
     }
     
     /// 处理血氧数据
-    /// 
+    ///
     /// 简单的血氧数据验证和处理。
-    /// 
+    ///
     /// # 参数
     /// * `raw_spo2` - 原始血氧数据
-    /// 
+    ///
     /// # 返回值
     /// 返回处理后的血氧值（百分比）
-    fn process_blood_oxygen(raw_spo2: i32) -> i32 {
+    fn process_blood_oxygen(raw_spo2: i32) -> f64 {
         // 简单的数据验证：小于1的值视为无效
         if raw_spo2 < 1 {
-            0
+            0.0
         } else {
-            raw_spo2
+            (raw_spo2 as f64) / 10.0
         }
     }
     

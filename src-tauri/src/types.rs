@@ -34,7 +34,7 @@ pub struct ProcessedVitalSigns {
     /// 处理后的体温
     pub body_temperature: f64,
     /// 血氧饱和度
-    pub blood_oxygen: i32,
+    pub blood_oxygen: f64,
     /// 心率
     pub heart_rate: f64,
     /// RR间隔
