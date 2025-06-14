@@ -86,7 +86,7 @@ impl SerialManager {
             },
             DataSourceType::TestSimulation => {
                 // 创建测试数据生成器
-                let test_reader = TestReader::new(config.clone(), self.data_queue.clone());
+                let test_reader = TestReader::new(self.data_queue.clone());
                 
                 // 启动测试数据生成
                 test_reader.start()?;

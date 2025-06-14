@@ -1,103 +1,85 @@
-use crate::types::{DataQueue, SerialConfig, VitalSigns};
+use crate::types::{DataQueue, VitalSigns};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use std::thread;
 use rand::Rng;
 
+
+const ECG_DATA: &[i32] = &[
+127486, 127609, 127665, 127603, 127388, 127038, 126610, 126197, 125875, 125662, 125508, 125304, 124943, 124385, 123691, 123003, 122491, 122262, 122294, 122444, 122509, 122346, 121957, 121514, 121269, 121406, 121889, 122424, 122559, 121918, 120486, 118772, 117763, 118621, 122218, 128678, 137128, 145811, 152553, 155438, 153470, 146936, 137350, 126982, 118142, 112487, 110594, 111932, 115211, 118926, 121888, 123539, 123970, 123694, 123315, 123234, 123528, 124007, 124380, 124440, 124169, 123721, 123324, 123150, 123242, 123501, 123768, 123902, 123858, 123689, 123515, 123441, 123518, 123718, 123966, 124183, 124332, 124429, 124527, 124682, 124920, 125231, 125570, 125892, 126172, 126409, 126632, 126864, 127114, 127370, 127596, 127759, 127837, 127831, 127762, 127657, 127538, 127412, 127274, 127111, 126909, 126668, 126399, 126113, 125829, 125558, 125305, 125071, 124855, 124661, 124496, 124369, 124288, 124258, 124278, 124338, 124429, 124534, 124633, 124711, 124756, 124759, 124722, 124657, 124580, 124513, 124474, 124470, 124502, 124556, 124616, 124662, 124690, 124693, 124681, 124665, 124654, 124651, 124657, 124662, 124660, 124645, 124617, 124579, 124536, 124494, 124453, 124413, 124369, 124324, 124279, 124243, 124235, 124282, 124408, 124629, 124948, 125339, 125765, 126177, 126535, 126820, 127036, 127210, 127368, 127519, 127637, 127675, 127580, 127329, 126950, 126513, 126114, 125820, 125632, 125481, 125252, 124848, 124247, 123530, 122859, 122395, 122227, 122301, 122453, 122482, 122266, 121852, 121433, 121266, 121493, 122023, 122514, 122503, 121676, 120120, 118466, 117770, 119176, 123427, 130435, 139110, 147551, 153580, 155436, 152388, 145011, 135043, 124824, 116575, 111736, 110629, 112518, 116016, 119649, 122350, 123711, 123942, 123603, 123270, 123275, 123626, 124099, 124408, 124389, 124067, 123623, 123276, 123173, 123316, 123584, 123819, 123897, 123806, 123622, 123470, 123441, 123566, 123793, 124040, 124233, 124353, 124431, 124533, 124711, 124984, 125324, 125679, 125997, 126259,
+];
+
 pub struct TestReader {
-    config: SerialConfig,
     data_queue: DataQueue,
     stop_flag: Arc<AtomicBool>,
 }
 
 impl TestReader {
-    pub fn new(config: SerialConfig, data_queue: DataQueue) -> Self {
-        println!("[TestReader] 初始化测试数据生成器");
+    pub fn new(data_queue: DataQueue) -> Self {
+        println!("[TestReader] 初始化测试数据生成器（ECG 来自常量数组）");
         Self {
-            config,
             data_queue,
             stop_flag: Arc::new(AtomicBool::new(false)),
         }
     }
 
-    pub fn test_connection(&self) -> Result<(), String> {
-        println!("[TestReader] 测试连接 (模拟模式)");
-        Ok(())
-    }
-
-    pub fn send_data(&self, data: &str) -> Result<(), String> {
-        println!("[TestReader] 模拟发送数据: {}", data);
-        Ok(())
-    }
-
-    // 生成模拟的生命体征数据
-    fn generate_test_data() -> VitalSigns {
-        let mut rng = rand::thread_rng();
-        
-        // 模拟心电数据 - 生成类似正弦波的数据
-        let time = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as f64 / 1000.0;
-        
-        // 基础正弦波 + 随机噪声
-        let ecg_base = (time * 5.0).sin() * 500.0;
-        let ecg_noise = rng.gen_range(-50.0..50.0);
-        let ecg = (ecg_base + ecg_noise) as i32;
-        
-        // 血氧饱和度 - 正常范围95-100
-        let spo2 = rng.gen_range(95..101);
-        
-        // 体温 - 正常范围36-37.5摄氏度，转换为整数表示
-        let temp_float = rng.gen_range(36.0..37.5);
-        let temp = (temp_float * 10.0) as i32;
-        
-        // 血压数据 - 收缩压(高压)和舒张压(低压)
-        let systolic = rng.gen_range(110..140);
-        let diastolic = rng.gen_range(70..90);
-        
-        VitalSigns {
-            ecg,
-            spo2,
-            temp,
-            systolic,
-            diastolic,
-        }
-    }
-
     pub fn start(&self) -> Result<(), String> {
         println!("[TestReader] 启动测试数据生成线程");
-        
+
         let stop_flag = self.stop_flag.clone();
         let data_queue = self.data_queue.clone();
-        
+
         thread::spawn(move || {
-            println!("[TestReader][线程] 测试数据生成线程已启动");
-            
-            while !stop_flag.load(Ordering::Relaxed) {
-                // 生成测试数据
-                let vital_signs = Self::generate_test_data();
-                
-                // 将数据添加到队列
-                let mut queue = data_queue.lock().unwrap();
-                if queue.len() >= 1000 {
-                    queue.pop_front();
+            println!("[TestReader][线程] 生成线程已启动 (250 Hz)");
+
+            let mut rng = rand::thread_rng();
+            let mut ecg_idx: usize = 0;
+
+            while !stop_flag.load(Ordering::SeqCst) {
+                // ---------- 1. 取 ECG 数据 ----------
+                let ecg = ECG_DATA[ecg_idx];
+                ecg_idx = (ecg_idx + 1) % ECG_DATA.len(); // 读到末尾就回到 0
+
+                // ---------- 2. 生成其它生命体征 ----------
+                let spo2_float: f32 = rng.gen_range(95.0..=100.0);
+                let spo2: i32 = (spo2_float * 10.0).round() as i32; // 97.3%→973
+
+                let temp_float: f32 = rng.gen_range(36.0..=37.5);   // 正常体温
+                let temp: i32 = (temp_float * 10.0).round() as i32; // 36.8℃→368
+
+                let systolic = rng.gen_range(110..140);
+                let diastolic = rng.gen_range(70..90);
+
+                let vital_signs = VitalSigns {
+                    ecg,
+                    spo2,
+                    temp,
+                    systolic,
+                    diastolic,
+                };
+
+                // ---------- 3. 推入队列 (带简单截断) ----------
+                {
+                    let mut q = data_queue.lock().unwrap();
+                    if q.len() >= 1_000 {
+                        q.pop_front();
+                    }
+                    q.push_back(vital_signs);
                 }
-                queue.push_back(vital_signs);
-                
-                // 控制数据生成频率
-                thread::sleep(Duration::from_millis(100)); // 每100ms生成一条数据
+
+                // ---------- 4. 休眠 4 ms → 250 Hz ----------
+                thread::sleep(Duration::from_millis(4));
             }
-            
-            println!("[TestReader][线程] 测试数据生成线程安全退出");
+
+            println!("[TestReader][线程] 已收到停止信号，安全退出");
         });
-        
+
         Ok(())
     }
 
     pub fn stop(&self) {
         println!("[TestReader] 停止测试数据生成");
-        self.stop_flag.store(true, Ordering::Relaxed);
+        self.stop_flag.store(true, Ordering::SeqCst);
     }
 }
