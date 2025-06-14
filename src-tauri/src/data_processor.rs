@@ -10,7 +10,6 @@
 use crate::types::{
     VitalSigns, ProcessedVitalSigns, EcgProcessingState, TemperatureProcessingState,
     DataQueue, ProcessedDataQueue, LttbDataPoint, LttbProcessingState, LttbConfig,
-    EcgStatistics, PerformanceMetrics, ProcessingStatus
 };
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
@@ -38,8 +37,6 @@ pub struct DataProcessor {
     lttb_config: LttbConfig,
     /// 数据处理线程运行状态标志
     is_running: Arc<AtomicBool>,
-    /// 性能监控开始时间
-    start_time: Instant,
     /// 处理的数据点总数
     total_processed: Arc<Mutex<u64>>,
 }
@@ -89,8 +86,7 @@ impl DataProcessor {
             global_min: f64::INFINITY,
             global_max: f64::NEG_INFINITY,
             sample_counter: 0,
-            need_recalculate_range: false,
-            range_update_interval: lttb_config.range_update_interval,
+
         }));
         
         Self {
@@ -101,7 +97,6 @@ impl DataProcessor {
             lttb_state,
             lttb_config,
             is_running: Arc::new(AtomicBool::new(false)),
-            start_time: Instant::now(),
             total_processed: Arc::new(Mutex::new(0)),
         }
     }
@@ -223,62 +218,6 @@ impl DataProcessor {
         lttb_state.compressed_buffer.clone()
     }
     
-    /// 获取ECG统计信息
-    /// 
-    /// # 返回值
-    /// 返回包含心率、变异性等统计信息的结构
-    pub fn get_ecg_statistics(&self) -> EcgStatistics {
-        let ecg_state = self.ecg_state.lock().unwrap();
-        let lttb_state = self.lttb_state.lock().unwrap();
-        
-        // 计算压缩效率
-        let compression_efficiency = if lttb_state.compressed_buffer.len() > 0 {
-            lttb_state.raw_buffer.len() as f64 / lttb_state.compressed_buffer.len() as f64
-        } else {
-            1.0
-        };
-        
-        EcgStatistics {
-            current_heart_rate: ecg_state.last_heart_rate,
-            average_heart_rate: ecg_state.last_heart_rate, // 简化实现
-            max_heart_rate: ecg_state.last_heart_rate,
-            min_heart_rate: ecg_state.last_heart_rate,
-            rr_variability: ecg_state.last_rr_interval,
-            signal_quality: 85.0, // 模拟值
-            compression_efficiency,
-        }
-    }
-    
-    /// 获取系统性能指标
-    /// 
-    /// # 返回值
-    /// 返回包含处理速率、内存使用等性能指标的结构
-    pub fn get_performance_metrics(&self) -> PerformanceMetrics {
-        let total_processed = *self.total_processed.lock().unwrap();
-        let elapsed_secs = self.start_time.elapsed().as_secs_f64();
-        let processing_rate = if elapsed_secs > 0.0 {
-            total_processed as f64 / elapsed_secs
-        } else {
-            0.0
-        };
-        
-        let queue_length = self.processed_data_queue.lock().unwrap().len();
-        let lttb_state = self.lttb_state.lock().unwrap();
-        let compression_ratio_achieved = if lttb_state.compressed_buffer.len() > 0 {
-            (1.0 - lttb_state.compressed_buffer.len() as f64 / lttb_state.raw_buffer.len() as f64) * 100.0
-        } else {
-            0.0
-        };
-        
-        PerformanceMetrics {
-            processing_rate,
-            memory_usage: 0.0, // 需要系统调用获取实际值
-            cpu_usage: 0.0,    // 需要系统调用获取实际值
-            queue_length,
-            compression_ratio_achieved,
-        }
-    }
-    
     /// 处理单个体征数据点
     /// 
     /// 这是核心处理函数，集成了所有数据处理算法：
@@ -318,7 +257,7 @@ impl DataProcessor {
         // 处理血氧数据
         let blood_oxygen = Self::process_blood_oxygen(vital_signs.spo2);
         
-        // 处理心电数据（传统算法）
+        // 处理心电数据
         let (heart_rate, rr_interval) = Self::process_ecg_data(
             vital_signs.ecg,
             ecg_state

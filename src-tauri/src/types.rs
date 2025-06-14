@@ -75,10 +75,10 @@ pub struct LttbProcessingState {
     pub global_max: f64,
     /// 采样计数器
     pub sample_counter: u64,
-    /// 是否需要重新计算全局范围
-    pub need_recalculate_range: bool,
-    /// 范围更新间隔
-    pub range_update_interval: u64,
+    // 是否需要重新计算全局范围
+    // pub need_recalculate_range: bool,
+    // 范围更新间隔
+    // pub range_update_interval: u64,
 }
 
 /// 体温处理状态
