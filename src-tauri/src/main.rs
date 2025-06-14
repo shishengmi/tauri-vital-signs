@@ -190,6 +190,19 @@ fn delete_patient_info(state: State<PatientStoreState>) -> Result<(), String> {
     }
 }
 
+
+/// 获取LTTB压缩后的ECG数据
+#[tauri::command]
+fn get_lttb_compressed_data(state: State<DataProcessorState>) -> Vec<types::LttbDataPoint> {
+    let processor_guard = state.0.lock().unwrap();
+    if let Some(processor) = processor_guard.as_ref() {
+        processor.get_lttb_compressed_data()
+    } else {
+        Vec::new()
+    }
+}
+
+
 fn main() {
     // 初始化串口管理器
     let serial_manager = SerialManager::new();
@@ -207,6 +220,7 @@ fn main() {
             get_latest_data,
             get_serial_status,
             get_processed_data,
+            get_lttb_compressed_data,
             start_data_processing,
             stop_data_processing,
             save_patient_info,
