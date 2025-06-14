@@ -292,7 +292,7 @@ const ECG_Canvas: React.FC<ECGCanvasProps> = ({
   // 绘制状态信息
   const drawStatusInfo = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number,
     connectionStatus: boolean, stats: typeof dataStats, vitals: typeof vitalSigns,
-    loadingStatus: boolean, errorMsg: string | null) => {
+    _loadingStatus: boolean, errorMsg: string | null) => {
     const config = configRef.current;
 
     ctx.fillStyle = config.textColor;
@@ -455,11 +455,6 @@ const ECG_Canvas: React.FC<ECGCanvasProps> = ({
 
 return (
   <div className="w-full h-full bg-gray-900 rounded-lg p-2">
-    {/* 简化的标题 */}
-    <div className="mb-1">
-      <h3 className="text-white text-base font-semibold">心电图</h3>
-    </div>
-    
     {/* 放大的画布区域 */}
     <div className="border border-gray-600 rounded overflow-hidden" style={{ height: 'calc(100% - 60px)' }}>
       <canvas

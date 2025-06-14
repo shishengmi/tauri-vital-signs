@@ -23,7 +23,6 @@ const PatientInfo: React.FC<PatientInfoProps> = ({
   height = 0,
   weight = 0,
   phone = "未设置",
-  address = "未设置",
   emergencyContact = "未设置",
   bloodType = "未知",
   allergies = [],

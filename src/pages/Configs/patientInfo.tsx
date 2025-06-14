@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Save, Trash2, User, Phone, MapPin, Heart, AlertTriangle, Plus, X } from 'lucide-react';
+import { Save, Trash2, User, Phone, Heart, AlertTriangle, Plus, X } from 'lucide-react';
 
 interface PatientInfo {
   name: string;

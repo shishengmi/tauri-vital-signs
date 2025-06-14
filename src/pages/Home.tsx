@@ -47,7 +47,6 @@ const Home = () => {
       <div className="rounded-lg p-4 flex flex-col gap-4 shadow-lg bg-gray-800 text-white">
         <div className="p-4 rounded shadow-md bg-gray-900"><Evaluate></Evaluate></div>
         <div className="p-4 rounded shadow-md bg-gray-900">
-          <h2>心电图</h2>
           <div className="w-full h-[300px] " id="ecg"><ECG_Canvas></ECG_Canvas></div>
         </div>
         <div className="p-4 rounded shadow-md flex-1 flex flex-col gap-2 bg-gray-900">
