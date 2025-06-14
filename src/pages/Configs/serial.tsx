@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -48,10 +48,6 @@ export default function SerialConfig() {
       try {
         const serialStatus: SerialStatus = await invoke('get_serial_status');
         setStatus(serialStatus);
-        appendLog(
-          `串口状态: ${serialStatus.type}` +
-          (serialStatus.data ? ` (${serialStatus.data})` : '')
-        );
       } catch (error) {
         appendLog('获取串口状态失败: ' + error);
         console.error('获取串口状态失败:', error);
