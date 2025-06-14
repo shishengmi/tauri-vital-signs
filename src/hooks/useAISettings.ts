@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
 import { LazyStore } from '@tauri-apps/plugin-store';
 
 // AI 设置接口
@@ -72,53 +71,140 @@ export const useAISettings = () => {
     await store.save();
   };
 
-  // 测试连接
+  // 测试连接 - 前端实现
   const testConnection = async (provider: ProviderType) => {
     setIsLoading(true);
     try {
-      let result;
+      let result = { success: false, message: '' };
+      
       if (provider === 'openai') {
-        result = await invoke<{ success: boolean; message: string }>('test_openai_connection', {
-          apiKey: settings.openai.apiKey,
-          apiUrl: settings.openai.apiUrl || undefined,
-        });
+        // 测试OpenAI连接
+        try {
+          const response = await fetch(`${settings.openai.apiUrl}/models`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${settings.openai.apiKey}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.ok) {
+            result = { success: true, message: '连接成功' };
+          } else {
+            const error = await response.json();
+            result = { success: false, message: error.error?.message || '连接失败' };
+          }
+        } catch (error: any) {
+          result = { success: false, message: error.message || '网络错误' };
+        }
       } else if (provider === 'ollama') {
-        result = await invoke<{ success: boolean; message: string }>('test_ollama_connection', {
-          apiUrl: settings.ollama.apiUrl,
-        });
+        // 测试Ollama连接
+        try {
+          const response = await fetch(`${settings.ollama.apiUrl}/api/tags`, {
+            method: 'GET'
+          });
+          
+          if (response.ok) {
+            result = { success: true, message: '连接成功' };
+          } else {
+            result = { success: false, message: '连接失败' };
+          }
+        } catch (error: any) {
+          result = { success: false, message: error.message || '网络错误' };
+        }
       } else if (provider === 'lmstudio') {
-        result = await invoke<{ success: boolean; message: string }>('test_lmstudio_connection', {
-          apiUrl: settings.lmstudio.apiUrl,
-        });
+        // 测试LM Studio连接
+        try {
+          const response = await fetch(`${settings.lmstudio.apiUrl}/models`, {
+            method: 'GET'
+          });
+          
+          if (response.ok) {
+            result = { success: true, message: '连接成功' };
+          } else {
+            result = { success: false, message: '连接失败' };
+          }
+        } catch (error: any) {
+          result = { success: false, message: error.message || '网络错误' };
+        }
       } else {
         throw new Error('未知的AI提供商');
       }
+      
       return result;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 刷新模型列表
+  // 刷新模型列表 - 前端实现
   const refreshModels = async (provider: ProviderType) => {
     setIsLoading(true);
     try {
       let models: string[] = [];
+  
       if (provider === 'openai') {
-        models = await invoke<string[]>('get_openai_models', {
-          apiKey: settings.openai.apiKey,
-          apiUrl: settings.openai.apiUrl || undefined,
-        });
+        try {
+          const response = await fetch(`${settings.openai.apiUrl}/models`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${settings.openai.apiKey}`,
+              'Content-Type': 'application/json'
+            }
+          });
+  
+          if (response.ok) {
+            const data = await response.json();
+            models = data.data
+              .filter((model: any) => 
+                model.id.includes('gpt') && 
+                !model.id.includes('instruct') && 
+                !model.id.includes('-vision-')
+              )
+              .map((model: any) => model.id);
+          }
+        } catch (error) {
+          console.error('获取OpenAI模型失败:', error);
+        }
       } else if (provider === 'ollama') {
-        models = await invoke<string[]>('get_ollama_models', {
-          apiUrl: settings.ollama.apiUrl,
-        });
+        try {
+          const response = await fetch(`${settings.ollama.apiUrl}/api/tags`, {
+            method: 'GET'
+          });
+  
+          if (response.ok) {
+            const data = await response.json();
+            models = data.models?.map((model: any) => model.name) || [];
+          }
+        } catch (error) {
+          console.error('获取Ollama模型失败:', error);
+        }
       } else if (provider === 'lmstudio') {
-        models = await invoke<string[]>('get_lmstudio_models', {
-          apiUrl: settings.lmstudio.apiUrl,
-        });
+        try {
+          // lmstudio 接口为 /v1/models，兼容配置结尾无斜杠
+          const apiUrl = settings.lmstudio.apiUrl.replace(/\/$/, '');
+          const response = await fetch(`${apiUrl}/models`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+  
+          if (response.ok) {
+            const data = await response.json();
+            models = Array.isArray(data.data)
+              ? data.data.map((model: any) => model.id)
+              : [];
+          }
+        } catch (error) {
+          console.error('获取LM Studio模型失败:', error);
+        }
       }
-      // 更新 provider 下的模型列表
+  
+      if (models.length === 0) {
+        models = defaultSettings[provider].availableModels;
+      }
+  
       const updatedSettings: AISettings = {
         ...settings,
         [provider]: {
@@ -131,6 +217,7 @@ export const useAISettings = () => {
       setIsLoading(false);
     }
   };
+  
 
   return {
     settings,
@@ -141,4 +228,3 @@ export const useAISettings = () => {
     inited,
   };
 };
-
