@@ -12,7 +12,7 @@ const BloodPressure = () => {
 
           {/* 高压值 */}
           <div className="rounded shadow flex items-center justify-center p-2">
-            <div className="text-4xl font-bold text-blue-700">118</div>
+            <div className="text-4xl font-bold text-blue-700">---</div>
           </div>
 
           {/* 低压单位 */}
@@ -23,7 +23,7 @@ const BloodPressure = () => {
 
           {/* 低压值 */}
           <div className="rounded shadow flex items-center justify-center p-2">
-            <div className="text-4xl font-bold text-red-600">78</div>
+            <div className="text-4xl font-bold text-red-600">---</div>
           </div>
         </div>
 
