@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useAISettings } from '@/hooks/useAISettings';
+import { Loader2 } from 'lucide-react';
 import OpenAI from 'openai';
 
 interface AIAnalysisProps {
@@ -13,19 +15,44 @@ interface AnalysisState {
   analysisCount: number;
 }
 
+// 过滤<think></think>标签之间的内容 - 更严格的实现
+const filterThinkingContent = (text: string): string => {
+  // 匹配<think>和</think>之间的内容，包括标签本身，允许标签内有属性
+  const thinkRegex = /<think[^>]*>([\s\S]*?)<\/think>/g;
+  
+  // 匹配单独的<think/>标签，允许标签内有属性
+  const selfClosingThinkRegex = /<think[^>]*\/>/g;
+  
+  // 匹配可能存在的不规则格式，如<think >或< think>等
+  const irregularThinkRegex = /<\s*think\s*>([\s\S]*?)<\s*\/\s*think\s*>/g;
+  
+  // 移除所有匹配的内容
+  let result = text;
+  result = result.replace(thinkRegex, '');
+  result = result.replace(selfClosingThinkRegex, '');
+  result = result.replace(irregularThinkRegex, '');
+  
+  // 处理可能的嵌套标签情况，重复过滤直到没有变化
+  let previousResult = '';
+  while (previousResult !== result) {
+    previousResult = result;
+    result = result.replace(thinkRegex, '').replace(selfClosingThinkRegex, '').replace(irregularThinkRegex, '');
+  }
+  
+  // 移除可能的空行和多余空格
+  result = result.replace(/^\s*[\r\n]/gm, '').trim();
+  
+  return result;
+};
+
 const AIAnalysis: React.FC<AIAnalysisProps> = ({ className = '' }) => {
+  const { settings, inited } = useAISettings();
   const [analysisState, setAnalysisState] = useState<AnalysisState>({
     isAnalyzing: false,
     progress: 0,
     aiResponse: '',
     lastAnalysisTime: null,
     analysisCount: 0
-  });
-
-  // 初始化OpenAI客户端
-  const openai = new OpenAI({
-    apiKey: "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",
-    dangerouslyAllowBrowser: true
   });
 
   // 模拟获取生命体征数据
@@ -44,6 +71,16 @@ const AIAnalysis: React.FC<AIAnalysisProps> = ({ className = '' }) => {
 
   // 执行AI分析
   const performAIAnalysis = async () => {
+    // 如果设置未初始化或没有有效的提供商，则不执行分析
+    if (!inited || !settings.activeProvider || 
+        (settings.activeProvider === 'openai' && !settings.openai.apiKey)) {
+      setAnalysisState(prev => ({
+        ...prev,
+        aiResponse: '请先在设置中配置AI服务提供商和API密钥'
+      }));
+      return;
+    }
+
     setAnalysisState(prev => ({ 
       ...prev, 
       isAnalyzing: true, 
@@ -81,31 +118,99 @@ const AIAnalysis: React.FC<AIAnalysisProps> = ({ className = '' }) => {
 
 请保持回复简洁专业，不超过100字。`;
 
-      // 调用OpenAI API
-      const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          {
-            role: "system",
-            content: "你是一个专业的医疗AI助手，专门分析生命体征数据。请提供简洁、专业的健康评估。"
+      let aiResponse = '';
+      
+      // 根据不同的AI提供商使用不同的API
+      if (settings.activeProvider === 'openai') {
+        // 使用OpenAI API
+        const openai = new OpenAI({
+          apiKey: settings.openai.apiKey,
+          baseURL: settings.openai.apiUrl,
+          dangerouslyAllowBrowser: true
+        });
+        
+        const completion = await openai.chat.completions.create({
+          model: settings.openai.selectedModel || "gpt-3.5-turbo",
+          messages: [
+            {
+              role: "system",
+              content: "你是一个专业的医疗AI助手，专门分析生命体征数据。请提供简洁、专业的健康评估。"
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          max_tokens: 200,
+          temperature: 0.7
+        });
+        
+        aiResponse = completion.choices[0]?.message?.content || '分析完成，各项指标正常。';
+      } else if (settings.activeProvider === 'ollama') {
+        // 使用Ollama API
+        const response = await fetch(`${settings.ollama.apiUrl}/api/chat`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        max_tokens: 200,
-        temperature: 0.7
-      });
+          body: JSON.stringify({
+            model: settings.ollama.selectedModel,
+            messages: [
+              {
+                role: "system",
+                content: "你是一个专业的医疗AI助手，专门分析生命体征数据。请提供简洁、专业的健康评估。"
+              },
+              {
+                role: "user",
+                content: prompt
+              }
+            ],
+          }),
+        });
 
-      const aiResponse = completion.choices[0]?.message?.content || '分析完成，各项指标正常。';
+        if (response.ok) {
+          const data = await response.json();
+          aiResponse = data.message?.content || '分析完成，各项指标正常。';
+        } else {
+          throw new Error(`Ollama API error: ${response.statusText}`);
+        }
+      } else if (settings.activeProvider === 'lmstudio') {
+        // 使用LM Studio API
+        const response = await fetch(`${settings.lmstudio.apiUrl}/chat/completions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: settings.lmstudio.selectedModel,
+            messages: [
+              {
+                role: "system",
+                content: "你是一个专业的医疗AI助手，专门分析生命体征数据。请提供简洁、专业的健康评估。"
+              },
+              {
+                role: "user",
+                content: prompt
+              }
+            ],
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          aiResponse = data.choices[0]?.message?.content || '分析完成，各项指标正常。';
+        } else {
+          throw new Error(`LM Studio API error: ${response.statusText}`);
+        }
+      }
+      
+      // 过滤掉<think></think>标签之间的内容
+      const filteredResponse = filterThinkingContent(aiResponse);
       
       clearInterval(progressInterval);
       setAnalysisState(prev => ({
         ...prev,
         isAnalyzing: false,
         progress: 100,
-        aiResponse,
+        aiResponse: filteredResponse || '分析完成，各项指标正常。',
         lastAnalysisTime: new Date().toLocaleTimeString(),
         analysisCount: prev.analysisCount + 1
       }));
@@ -125,10 +230,22 @@ const AIAnalysis: React.FC<AIAnalysisProps> = ({ className = '' }) => {
 
   // 定时自动分析（每45秒）
   useEffect(() => {
-    performAIAnalysis(); // 初始分析
-    const interval = setInterval(performAIAnalysis, 45000);
-    return () => clearInterval(interval);
-  }, []);
+    if (inited) {
+      performAIAnalysis(); // 初始分析
+      const interval = setInterval(performAIAnalysis, 45000);
+      return () => clearInterval(interval);
+    }
+  }, [inited]);
+
+  // 如果设置还未加载完成，显示加载状态
+  if (!inited) {
+    return (
+      <div className={`bg-gray-900 rounded-lg p-4 border border-gray-700 ${className} flex items-center justify-center`}>
+        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+        <span>加载AI设置中...</span>
+      </div>
+    );
+  }
 
   return (
     <div className={`bg-gray-900 rounded-lg p-4 border border-gray-700 ${className}`}>
@@ -184,8 +301,8 @@ const AIAnalysis: React.FC<AIAnalysisProps> = ({ className = '' }) => {
       )}
 
       {/* AI分析结果 */}
-      <div className="bg-gray-800 rounded-lg p-4 border border-gray-600">
-        <div className="flex items-center gap-2 mb-3">
+      <div className="bg-gray-800 rounded-lg p-4 border border-gray-600 mt-0">
+        <div className="flex items-center gap-2 mb-2">
           <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -193,7 +310,7 @@ const AIAnalysis: React.FC<AIAnalysisProps> = ({ className = '' }) => {
         </div>
         
         {analysisState.aiResponse ? (
-          <div className="text-sm text-gray-200 leading-relaxed whitespace-pre-line">
+          <div className="text-sm text-gray-200 leading-relaxed overflow-y-auto max-h-[150px] break-words">
             {analysisState.aiResponse}
           </div>
         ) : (
@@ -207,7 +324,7 @@ const AIAnalysis: React.FC<AIAnalysisProps> = ({ className = '' }) => {
       <div className="flex gap-2 mt-4">
         <button 
           onClick={performAIAnalysis}
-          disabled={analysisState.isAnalyzing}
+          disabled={analysisState.isAnalyzing || !settings.activeProvider}
           className="flex-1 py-2 px-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white text-sm font-medium rounded-lg transition-all duration-200 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {analysisState.isAnalyzing ? (
@@ -225,15 +342,6 @@ const AIAnalysis: React.FC<AIAnalysisProps> = ({ className = '' }) => {
           )}
         </button>
       </div>
-
-      {/* AI标识 */}
-      {/* <div className="flex items-center justify-center mt-3 pt-3 border-t border-gray-700">
-        <div className="flex items-center gap-2 text-xs text-gray-500">
-          <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
-          <span>Powered by OpenAI GPT</span>
-          <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
-        </div>
-      </div> */}
     </div>
   );
 };
