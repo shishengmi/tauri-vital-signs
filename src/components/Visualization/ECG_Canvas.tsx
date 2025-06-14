@@ -19,7 +19,7 @@ interface ECGCanvasProps {
 
 /**
  * ECG心电图画布组件
- * 参考ECG.vue实现，使用双画布分层设计
+ * 简化版本，只保留核心画布功能
  */
 const ECG_Canvas: React.FC<ECGCanvasProps> = ({
   className = '',
@@ -32,18 +32,14 @@ const ECG_Canvas: React.FC<ECGCanvasProps> = ({
   const canvasRootRef = useRef<HTMLDivElement>(null);
   const gridCanvasRef = useRef<HTMLCanvasElement>(null);
   const ekgCanvasRef = useRef<HTMLCanvasElement>(null);
-  const sweepCanvasRef = useRef<HTMLCanvasElement>(null);
   const [canvasWidth, setCanvasWidth] = useState(0);
   const [canvasHeight, setCanvasHeight] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [heartRate, setHeartRate] = useState(70);
   
   // ECG数据队列
   const ecgDataQueue = useRef<number[]>([]);
   const offsetRef = useRef(2);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const sweepPositionRef = useRef(0);
 
   // 设置画布尺寸
   const setCanvasSize = useCallback(() => {
@@ -57,18 +53,17 @@ const ECG_Canvas: React.FC<ECGCanvasProps> = ({
   const drawGrid = useCallback((ctx: CanvasRenderingContext2D) => {
     ctx.strokeStyle = '#0a4a2a';
     ctx.lineWidth = 1;
-    const cellWidth = 40;
-    const cellHeight = 20;
+    const cellSize = 25; // 使用固定的间距，确保是正方形
     const width = canvasWidth;
     const height = canvasHeight;
-    const cols = Math.floor(width / cellWidth);
-    const rows = Math.floor(height / cellHeight);
+    const cols = Math.floor(width / cellSize);
+    const rows = Math.floor(height / cellSize);
 
     // 绘制垂直线
     for (let col = 0; col <= cols; col++) {
-      let x = col * cellWidth;
+      let x = col * cellSize;
       if (col === cols) {
-        x -= cellWidth * 0.3;
+        x -= cellSize * 0.3;
       }
       ctx.beginPath();
       ctx.moveTo(x, 0);
@@ -78,9 +73,9 @@ const ECG_Canvas: React.FC<ECGCanvasProps> = ({
 
     // 绘制水平线
     for (let row = 0; row <= rows; row++) {
-      let y = row * cellHeight;
+      let y = row * cellSize;
       if (row === rows) {
-        y -= cellHeight * 0.3;
+        y -= cellSize * 0.3;
       }
       ctx.beginPath();
       ctx.moveTo(0, y);
@@ -91,26 +86,10 @@ const ECG_Canvas: React.FC<ECGCanvasProps> = ({
     ctx.stroke();
   }, [canvasWidth, canvasHeight]);
 
-  // 绘制扫描线
-  const drawSweepLine = useCallback((ctx: CanvasRenderingContext2D) => {
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    ctx.strokeStyle = '#ffff00';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(sweepPositionRef.current, 0);
-    ctx.lineTo(sweepPositionRef.current, canvasHeight);
-    ctx.stroke();
-    
-    // 更新扫描线位置
-    sweepPositionRef.current += 2;
-    if (sweepPositionRef.current > canvasWidth) {
-      sweepPositionRef.current = 0;
-    }
-  }, [canvasWidth, canvasHeight]);
-
+  // 绘制ECG数据点
   // 绘制ECG数据点
   const drawEKGPoint = useCallback((ctx: CanvasRenderingContext2D, num: number) => {
-    const canvasRange = canvasHeight;
+    const canvasRange = canvasHeight * 0.8; // 只使用画布高度的80%，留出上下各10%的空白
     const maxOffset = canvasWidth / pointSpace;
     ctx.strokeStyle = '#00ff00';
     ctx.lineWidth = 2;
@@ -119,10 +98,10 @@ const ECG_Canvas: React.FC<ECGCanvasProps> = ({
     if (num > maxValue) num = maxValue;
     if (num < minValue) num = minValue;
 
-    // 将num值从[minValue, maxValue]范围映射到[canvasHeight, 0]范围
+    // 将num值从[minValue, maxValue]范围映射到[canvasHeight*0.8, 0]范围
     const scaledNum = ((num - minValue) / (maxValue - minValue)) * canvasRange;
-    // Y坐标调整，使数值小的在画布下方，数值大的在画布上方
-    const yPos = canvasHeight - scaledNum;
+    // Y坐标调整，使数值小的在画布下方，数值大的在画布上方，并添加10%的上下边距
+    const yPos = (canvasHeight * 0.1) + (canvasHeight * 0.8 - scaledNum);
 
     // 清除即将更新的区域
     ctx.clearRect(offsetRef.current * pointSpace, 0, refreshBlockWidth, canvasHeight);
@@ -136,7 +115,6 @@ const ECG_Canvas: React.FC<ECGCanvasProps> = ({
       ctx.beginPath();
     }
   }, [canvasHeight, canvasWidth, pointSpace, refreshBlockWidth, minValue, maxValue]);
-
   // 获取ECG数据
   const fetchECGData = useCallback(async () => {
     try {
@@ -148,14 +126,14 @@ const ECG_Canvas: React.FC<ECGCanvasProps> = ({
           return minValue + (point.y + 1) * (maxValue - minValue) / 2;
         });
         ecgDataQueue.current.push(...rawValues);
-        setError(null);
-        
-        // 模拟心率计算
-        setHeartRate(Math.floor(Math.random() * 20) + 60);
+      } else {
+        // 没有数据时添加0值
+        ecgDataQueue.current.push(0);
       }
     } catch (err) {
       console.error('获取ECG数据失败:', err);
-      setError(err instanceof Error ? err.message : '获取数据失败');
+      // 获取数据失败时添加0值
+      ecgDataQueue.current.push(0);
     }
   }, [minValue, maxValue]);
 
@@ -178,15 +156,49 @@ const ECG_Canvas: React.FC<ECGCanvasProps> = ({
     setIsRunning(prev => !prev);
   }, []);
 
-  // 清空数据
-  const clearData = useCallback(() => {
+  // 重置数据函数
+  const resetData = useCallback(() => {
+    // 1. 停止所有定时器
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    
+    // 2. 清空数据队列
     ecgDataQueue.current = [];
+    
+    // 3. 重置所有位置和状态
     offsetRef.current = 2;
+    
+    // 4. 获取所有画布上下文
+    const gridCtx = gridCanvasRef.current?.getContext('2d');
     const ekgCtx = ekgCanvasRef.current?.getContext('2d');
+    
+    // 5. 完全清除所有画布内容
+    if (gridCtx) {
+      gridCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+      // 重新绘制网格
+      drawGrid(gridCtx);
+    }
+    
     if (ekgCtx) {
       ekgCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+      // 重置绘图状态
+      ekgCtx.beginPath();
+      ekgCtx.moveTo(offsetRef.current * pointSpace, canvasHeight / 2);
+      
+      // 重新启动绘制定时器
+      intervalRef.current = setInterval(() => {
+        if (ecgDataQueue.current.length > 0) {
+          const num = ecgDataQueue.current.shift() as number;
+          drawEKGPoint(ekgCtx, num);
+        }
+      }, refreshInterval);
     }
-  }, [canvasWidth, canvasHeight]);
+    
+    // 不停止监测状态，只重置画布和数据
+    // setIsRunning(false);
+  }, [canvasWidth, canvasHeight, drawGrid, pointSpace, refreshInterval, drawEKGPoint]);
 
   // 初始化画布
   useEffect(() => {
@@ -197,6 +209,8 @@ const ECG_Canvas: React.FC<ECGCanvasProps> = ({
     setTimeout(() => {
       if (!gridCtx || !ekgCtx) return;
       drawGrid(gridCtx);
+      // 初始化ECG画布的绘图状态
+      ekgCtx.beginPath();
     }, 0);
 
     // 监听窗口大小变化
@@ -225,16 +239,17 @@ const ECG_Canvas: React.FC<ECGCanvasProps> = ({
     }
 
     const ekgCtx = ekgCanvasRef.current?.getContext('2d');
-    const sweepCtx = sweepCanvasRef.current?.getContext('2d');
-    if (!ekgCtx || !sweepCtx) return;
+    if (!ekgCtx) return;
+
+    // 确保ECG画布有正确的绘图状态
+    ekgCtx.beginPath();
+    ekgCtx.moveTo(offsetRef.current * pointSpace, canvasHeight / 2);
 
     intervalRef.current = setInterval(() => {
       if (ecgDataQueue.current.length > 0) {
         const num = ecgDataQueue.current.shift() as number;
         drawEKGPoint(ekgCtx, num);
       }
-      // 绘制扫描线
-      drawSweepLine(sweepCtx);
     }, refreshInterval);
 
     return () => {
@@ -243,109 +258,53 @@ const ECG_Canvas: React.FC<ECGCanvasProps> = ({
         intervalRef.current = null;
       }
     };
-  }, [isRunning, refreshInterval, drawEKGPoint, drawSweepLine]);
+  }, [isRunning, refreshInterval, drawEKGPoint, canvasHeight, pointSpace]);
 
   return (
-    <div className={`w-full h-full bg-gray-900 text-green-400 font-mono ${className}`}>
-      <div className="flex h-full">
-        {/* 左侧参数面板 */}
-        <div className="w-48 bg-gray-800 border-r border-gray-600 p-4 flex flex-col justify-between">
-          {/* 上部参数 */}
-          <div className="space-y-4">
-            <div className="text-orange-400">
-              <div className="text-sm">体征参数</div>
-              <div className="text-xs mt-1">数据源: 0</div>
-              <div className="text-xs">区间值: 0.1</div>
-            </div>
-            
-            <div className="text-green-400">
-              <div className="text-sm">FPS: 165</div>
-              <div className="text-xs mt-1">速度时间: 0.3ms</div>
-            </div>
-            
-            <div className="text-green-400">
-              <div className="text-sm">测试速度: 100 px/s</div>
-              <div className="text-xs mt-1">时间周期: 10 s</div>
-            </div>
-          </div>
-          
-          {/* 控制按钮 */}
-          <div className="space-y-2">
-            <button
-              onClick={toggleMonitoring}
-              className={`w-full px-3 py-2 text-sm rounded ${
-                isRunning 
-                  ? 'bg-red-600 hover:bg-red-700 text-white' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              }`}
-            >
-              {isRunning ? '停止' : '开始'}
-            </button>
-            
-            <button
-              onClick={clearData}
-              className="w-full px-3 py-2 text-sm bg-gray-600 hover:bg-gray-700 text-white rounded"
-            >
-              清空
-            </button>
-          </div>
-        </div>
-
-        {/* 主显示区域 */}
-        <div className="flex-1 flex flex-col">
-          {/* ECG画布容器 */}
-          <div 
-            ref={canvasRootRef}
-            className="flex-1 relative bg-black border border-gray-600"
+    <div className={`w-full h-full bg-black ${className}`}>
+      {/* ECG画布容器 */}
+      <div 
+        ref={canvasRootRef}
+        className="w-full h-full relative border border-gray-600"
+      >
+        {/* 网格画布 */}
+        <canvas
+          ref={gridCanvasRef}
+          width={canvasWidth}
+          height={canvasHeight}
+          className="absolute left-0 top-0"
+        />
+        
+        {/* ECG数据画布 */}
+        <canvas
+          ref={ekgCanvasRef}
+          width={canvasWidth}
+          height={canvasHeight}
+          className="absolute left-0 top-0"
+        />
+        
+        {/* 简单控制按钮 */}
+        <div className="absolute top-4 left-4 space-x-2">
+          <button
+            onClick={toggleMonitoring}
+            className={`px-3 py-1 text-sm rounded ${
+              isRunning 
+                ? 'bg-red-600 hover:bg-red-700 text-white' 
+                : 'bg-green-600 hover:bg-green-700 text-white'
+            }`}
           >
-            {/* 网格画布 */}
-            <canvas
-              ref={gridCanvasRef}
-              width={canvasWidth}
-              height={canvasHeight}
-              className="absolute left-0 top-0"
-            />
-            
-            {/* ECG数据画布 */}
-            <canvas
-              ref={ekgCanvasRef}
-              width={canvasWidth}
-              height={canvasHeight}
-              className="absolute left-0 top-0"
-            />
-            
-            {/* 扫描线画布 */}
-            <canvas
-              ref={sweepCanvasRef}
-              width={canvasWidth}
-              height={canvasHeight}
-              className="absolute left-0 top-0"
-            />
-            
-            {/* 错误提示 */}
-            {error && (
-              <div className="absolute top-4 left-4 bg-red-900 border border-red-700 rounded px-3 py-2">
-                <p className="text-red-300 text-sm">错误: {error}</p>
-              </div>
-            )}
-          </div>
-
-          {/* 底部状态栏 */}
-          <div className="h-16 bg-gray-800 border-t border-gray-600 flex items-center justify-between px-6">
-            <div className="flex items-center space-x-4">
-              <span className={`text-lg font-bold ${
-                isRunning ? 'text-green-400' : 'text-red-400'
-              }`}>
-                {isRunning ? '已连接' : '未连接'}
-              </span>
-            </div>
-            
-            <div className="text-right">
-              <div className="text-2xl font-bold text-green-400">
-                {heartRate} bpm
-              </div>
-            </div>
-          </div>
+            {isRunning ? '停止' : '开始'}
+          </button>
+          
+          <button
+            onClick={resetData}
+            disabled={!isRunning}
+            className={`px-3 py-1 text-sm rounded ${isRunning 
+              ? 'bg-gray-600 hover:bg-gray-700 text-white' 
+              : 'bg-gray-400 text-gray-200 cursor-not-allowed'}`}
+          >
+            重置
+          </button>
         </div>
       </div>
     </div>
