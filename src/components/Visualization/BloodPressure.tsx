@@ -1,4 +1,12 @@
+import { useVitalSigns } from '@/hooks/useVitalSigns';
+
 const BloodPressure = () => {
+  const { data, isLoading } = useVitalSigns();
+  
+  // 获取高压和低压值
+  const systolic = data?.systolic;
+  const diastolic = data?.diastolic;
+  
   return (
     <div className="w-full h-full p-4 rounded-xl">
       <div className="grid grid-cols-3 gap-2 h-full">
@@ -12,7 +20,9 @@ const BloodPressure = () => {
 
           {/* 高压值 */}
           <div className="rounded shadow flex items-center justify-center p-2">
-            <div className="text-4xl font-bold text-blue-700">---</div>
+            <div className="text-4xl font-bold text-blue-700">
+              {isLoading ? '加载中...' : (systolic !== undefined ? systolic : '---')}
+            </div>
           </div>
 
           {/* 低压单位 */}
@@ -23,7 +33,9 @@ const BloodPressure = () => {
 
           {/* 低压值 */}
           <div className="rounded shadow flex items-center justify-center p-2">
-            <div className="text-4xl font-bold text-red-600">---</div>
+            <div className="text-4xl font-bold text-red-600">
+              {isLoading ? '加载中...' : (diastolic !== undefined ? diastolic : '---')}
+            </div>
           </div>
         </div>
 

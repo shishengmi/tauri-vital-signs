@@ -202,6 +202,19 @@ fn get_lttb_compressed_data(state: State<DataProcessorState>) -> Vec<types::Lttb
     }
 }
 
+#[tauri::command]
+fn get_blood_pressure(state: State<SerialManagerState>) -> Result<(i32, i32), String> {
+    let manager = state.0.lock().unwrap();
+    let latest_data = manager.get_latest_data(1);
+    
+    if let Some(data) = latest_data.first() {
+        Ok((data.systolic, data.diastolic))
+    } else {
+        Err("没有可用的血压数据".to_string())
+    }
+}
+
+
 /// 设置数据源类型
 #[tauri::command]
 fn set_data_source_type(
@@ -254,7 +267,8 @@ fn main() {
             load_patient_info,
             delete_patient_info,
             set_data_source_type,
-            get_data_source_type
+            get_data_source_type,
+            get_blood_pressure  // 添加新的API函数
         ])
         .setup(|app| {
             // 在 setup 中初始化 PatientStore，这时可以访问 AppHandle

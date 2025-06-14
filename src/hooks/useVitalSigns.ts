@@ -8,6 +8,9 @@ interface VitalSignsData {
   blood_oxygen: number;
   heart_rate: number;
   rr_interval: number;
+  // 添加血压数据字段
+  systolic?: number; // 高压
+  diastolic?: number; // 低压
 }
 
 // 定义hook返回的数据结构
@@ -40,7 +43,20 @@ export const useVitalSigns = (refreshInterval: number = 1000): UseVitalSignsRetu
         const processedData = await invoke<VitalSignsData[]>('get_processed_data', { count: 1 });
         
         if (processedData && processedData.length > 0) {
-          setData(processedData[0]);
+          const vitalData = processedData[0];
+          
+          // 获取血压数据
+          try {
+            const [systolic, diastolic] = await invoke<[number, number]>('get_blood_pressure');
+            // 将血压数据添加到生命体征数据中
+            vitalData.systolic = systolic;
+            vitalData.diastolic = diastolic;
+          } catch (bpErr) {
+            console.warn('获取血压数据失败:', bpErr);
+            // 血压数据获取失败不影响其他数据的显示
+          }
+          
+          setData(vitalData);
           setLastUpdated(new Date());
         }
         setIsLoading(false);
