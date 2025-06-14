@@ -8,16 +8,16 @@ import type { ReasoningContentPartComponent } from "@assistant-ui/react";
 
 export const ReasoningPreview: ReasoningContentPartComponent = ({
   text,
-  status,
+  // status,
 }) => {
   const [collapsed, set] = useState(true);
 
-  const label =
-    status.type === "running"
-      ? "Thinking..."
-      : status.type === "complete"
-      ? "Thinking completed"
-      : "Thinking";
+  const label = <span>思考过程</span>;
+    // status.type === "running"
+    //   ? "Thinking..."
+    //   : status.type === "complete"
+    //   ? "Thinking completed"
+    //   : "Thinking";
 
   return (
     <div className="my-3 border-l-2">
