@@ -6,19 +6,24 @@
 mod serial_manager;
 mod serial_reader;
 mod types;
-mod data_processor; // 新增
+mod data_processor;
+mod patient_store;
 
 use serial_manager::SerialManager;
-use data_processor::DataProcessor; // 新增
+use data_processor::DataProcessor;
+use patient_store::{PatientStore, PatientInfo};
 use std::sync::Mutex;
-use tauri::State;
-use types::{SerialConfig, SerialStatus, VitalSigns, ProcessedVitalSigns}; // 更新
+use tauri::{State, Manager}; // 添加 Manager 导入
+use types::{SerialConfig, SerialStatus, VitalSigns, ProcessedVitalSigns};
 
 /// 全局串口管理器状态
 struct SerialManagerState(Mutex<SerialManager>);
 
 /// 全局数据处理器状态
-struct DataProcessorState(Mutex<Option<DataProcessor>>); // 新增
+struct DataProcessorState(Mutex<Option<DataProcessor>>);
+
+/// 全局患者存储状态
+struct PatientStoreState(Mutex<Option<PatientStore>>);
 
 /// 获取可用串口列表
 #[tauri::command]
@@ -127,7 +132,8 @@ fn start_data_processing(
     processor_state: State<DataProcessorState>
 ) -> Result<(), String> {
     let serial_manager = serial_state.0.lock().unwrap();
-    let data_queue = serial_manager.get_data_queue(); // 需要在SerialManager中添加此方法
+    let data_queue = serial_manager.get_data_queue();
+    drop(serial_manager);
     
     let processor = DataProcessor::new(data_queue);
     processor.start();
@@ -148,13 +154,50 @@ fn stop_data_processing(state: State<DataProcessorState>) {
     *processor_guard = None;
 }
 
+/// 保存患者信息
+#[tauri::command]
+fn save_patient_info(
+    patient_info: PatientInfo,
+    state: State<PatientStoreState>,
+) -> Result<(), String> {
+    let store_guard = state.0.lock().unwrap();
+    if let Some(store) = store_guard.as_ref() {
+        store.save_patient_info(&patient_info)
+    } else {
+        Err("患者存储未初始化".to_string())
+    }
+}
+
+/// 加载患者信息
+#[tauri::command]
+fn load_patient_info(state: State<PatientStoreState>) -> Result<PatientInfo, String> {
+    let store_guard = state.0.lock().unwrap();
+    if let Some(store) = store_guard.as_ref() {
+        store.load_patient_info()
+    } else {
+        Err("患者存储未初始化".to_string())
+    }
+}
+
+/// 删除患者信息
+#[tauri::command]
+fn delete_patient_info(state: State<PatientStoreState>) -> Result<(), String> {
+    let store_guard = state.0.lock().unwrap();
+    if let Some(store) = store_guard.as_ref() {
+        store.delete_patient_info()
+    } else {
+        Err("患者存储未初始化".to_string())
+    }
+}
+
 fn main() {
     // 初始化串口管理器
     let serial_manager = SerialManager::new();
 
     tauri::Builder::default()
         .manage(SerialManagerState(Mutex::new(serial_manager)))
-        .manage(DataProcessorState(Mutex::new(None))) // 新增
+        .manage(DataProcessorState(Mutex::new(None)))
+        .manage(PatientStoreState(Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![
             get_available_ports,
             test_serial_connection,
@@ -163,10 +206,29 @@ fn main() {
             send_serial_data,
             get_latest_data,
             get_serial_status,
-            get_processed_data,      // 新增
-            start_data_processing,   // 新增
-            stop_data_processing     // 新增
+            get_processed_data,
+            start_data_processing,
+            stop_data_processing,
+            save_patient_info,
+            load_patient_info,
+            delete_patient_info
         ])
+        .setup(|app| {
+            // 在 setup 中初始化 PatientStore，这时可以访问 AppHandle
+            match PatientStore::new(app.handle()) {
+                Ok(patient_store) => {
+                    // 更新 state
+                    let patient_store_state = app.state::<PatientStoreState>();
+                    *patient_store_state.0.lock().unwrap() = Some(patient_store);
+                    println!("[Main] 患者存储初始化成功");
+                },
+                Err(e) => {
+                    eprintln!("[Main] 患者存储初始化失败: {}", e);
+                    // 可以选择继续运行或者退出应用
+                }
+            }
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("Tauri应用运行错误");
 }

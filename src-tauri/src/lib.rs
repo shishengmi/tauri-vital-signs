@@ -12,4 +12,5 @@ macro_rules! undefined_Send_for_SerialManager {
 pub mod serial_manager;
 pub mod serial_reader;
 pub mod types;
-pub mod data_processor; // 新增
+pub mod data_processor;
+pub mod patient_store; // 新增患者存储模块
