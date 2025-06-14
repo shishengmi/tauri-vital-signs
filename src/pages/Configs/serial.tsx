@@ -3,6 +3,8 @@ import { invoke } from '@tauri-apps/api/core'
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 interface SerialPort {
   name: string;
@@ -21,6 +23,7 @@ export default function SerialConfig() {
   const [status, setStatus] = useState<SerialStatus>({ type: 'Disconnected' });
   const [testing, setTesting] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
+  const [dataSourceType, setDataSourceType] = useState<string>('real');
 
   const appendLog = (msg: string) => {
     setLogs((prev) => [
@@ -54,6 +57,19 @@ export default function SerialConfig() {
       }
     };
 
+    // 获取当前数据源类型
+    const fetchDataSourceType = async () => {
+      try {
+        const sourceType: string = await invoke('get_data_source_type');
+        setDataSourceType(sourceType);
+        appendLog(`当前数据源类型: ${sourceType === 'real' ? '真实串口' : '测试模拟'}`);
+      } catch (error) {
+        appendLog('获取数据源类型失败: ' + error);
+        console.error('获取数据源类型失败:', error);
+      }
+    };
+
+    fetchDataSourceType();
     const statusInterval = setInterval(checkStatus, 100);
     return () => clearInterval(statusInterval);
     // eslint-disable-next-line
@@ -80,7 +96,11 @@ export default function SerialConfig() {
   };
 
   const handleConnect = async () => {
-    appendLog(`尝试连接串口: ${selectedPort} @ ${baudRate}`);
+    if (dataSourceType === 'real' && !selectedPort) {
+      appendLog('真实模式下需要选择串口才能连接');
+      return;
+    }
+    appendLog(`尝试连接${dataSourceType === 'real' ? `串口: ${selectedPort} @ ${baudRate}` : '测试数据生成器'}`);
     try {
       await invoke('connect_serial', {
         portName: selectedPort,
@@ -88,8 +108,8 @@ export default function SerialConfig() {
       });
       appendLog(`连接命令已发送`);
     } catch (error) {
-      appendLog('连接串口失败: ' + error);
-      console.error('连接串口失败:', error);
+      appendLog('连接失败: ' + error);
+      console.error('连接失败:', error);
     }
   };
 
@@ -104,11 +124,41 @@ export default function SerialConfig() {
     }
   };
 
+  const handleDataSourceTypeChange = async (value: string) => {
+    appendLog(`切换数据源类型: ${value === 'real' ? '真实串口' : '测试模拟'}`);
+    try {
+      await invoke('set_data_source_type', { sourceType: value });
+      setDataSourceType(value);
+    } catch (error) {
+      appendLog('设置数据源类型失败: ' + error);
+      console.error('设置数据源类型失败:', error);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       <h2 className="text-2xl font-bold">串口设置</h2>
       
       <div className="space-y-4">
+        {/* 数据源类型选择 */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">数据源类型</label>
+          <RadioGroup 
+            value={dataSourceType} 
+            onValueChange={handleDataSourceTypeChange}
+            className="flex space-x-4"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="real" id="real" />
+              <Label htmlFor="real">真实串口数据</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="test" id="test" />
+              <Label htmlFor="test">测试模拟数据</Label>
+            </div>
+          </RadioGroup>
+        </div>
+
         <div className="space-y-2">
           <label className="text-sm font-medium">串口选择</label>
           <Select value={selectedPort} onValueChange={(value) => {
@@ -159,13 +209,13 @@ export default function SerialConfig() {
         <div className="flex space-x-4">
           <Button
             onClick={handleTestConnection}
-            disabled={!selectedPort || testing || status.type === 'Connected'}
+            disabled={!selectedPort || testing || status.type === 'Connected' || dataSourceType !== 'real'}
           >
             {testing ? '测试中...' : '测试连接'}
           </Button>
           <Button
             onClick={handleConnect}
-            disabled={!selectedPort || status.type === 'Connected'}
+            disabled={(dataSourceType === 'real' && !selectedPort) || status.type === 'Connected'}
           >
             连接
           </Button>

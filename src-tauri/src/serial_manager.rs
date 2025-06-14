@@ -1,5 +1,6 @@
 use crate::serial_reader::SerialReader;
-use crate::types::{DataQueue, SerialConfig, SerialStatus, VitalSigns};
+use crate::test_reader::TestReader;
+use crate::types::{DataQueue, DataSourceType, SerialConfig, SerialStatus, VitalSigns};
 use serialport::SerialPortType;
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
@@ -8,10 +9,14 @@ use std::sync::{Arc, Mutex};
 pub struct SerialManager {
     /// 当前串口读取器
     reader: Option<SerialReader>,
+    /// 测试数据生成器
+    test_reader: Option<TestReader>,
     /// 数据队列
     data_queue: DataQueue,
     /// 串口状态
     status: Arc<Mutex<SerialStatus>>,
+    /// 当前数据源类型
+    data_source_type: Arc<Mutex<DataSourceType>>,
 }
 
 impl SerialManager {
@@ -19,8 +24,10 @@ impl SerialManager {
     pub fn new() -> Self {
         Self {
             reader: None,
+            test_reader: None,
             data_queue: Arc::new(Mutex::new(VecDeque::with_capacity(1000))),
             status: Arc::new(Mutex::new(SerialStatus::Disconnected)),
+            data_source_type: Arc::new(Mutex::new(DataSourceType::RealSerial)),
         }
     }
 
@@ -64,25 +71,48 @@ impl SerialManager {
         // 先断开现有连接
         self.disconnect();
 
-        // 创建新的串口读取器
-        let reader = SerialReader::new(config.clone(), self.data_queue.clone());
-
-        // 启动串口读取
-        reader.start()?;
-
-        // 更新状态
-        *self.status.lock().unwrap() = SerialStatus::Connected(config.port_name.clone());
-        self.reader = Some(reader);
-
+        // 根据数据源类型选择连接方式
+        match self.get_data_source_type() {
+            DataSourceType::RealSerial => {
+                // 创建新的串口读取器
+                let reader = SerialReader::new(config.clone(), self.data_queue.clone());
+                
+                // 启动串口读取
+                reader.start()?;
+                
+                // 更新状态
+                *self.status.lock().unwrap() = SerialStatus::Connected(config.port_name.clone());
+                self.reader = Some(reader);
+            },
+            DataSourceType::TestSimulation => {
+                // 创建测试数据生成器
+                let test_reader = TestReader::new(config.clone(), self.data_queue.clone());
+                
+                // 启动测试数据生成
+                test_reader.start()?;
+                
+                // 更新状态
+                *self.status.lock().unwrap() = SerialStatus::Connected("TEST_MODE".to_string());
+                self.test_reader = Some(test_reader);
+            }
+        }
+        
         Ok(())
     }
 
     /// 断开当前串口连接
     pub fn disconnect(&mut self) {
+        // 停止串口读取器
         if let Some(reader) = self.reader.take() {
             reader.stop();
-            *self.status.lock().unwrap() = SerialStatus::Disconnected;
         }
+        
+        // 停止测试数据生成器
+        if let Some(test_reader) = self.test_reader.take() {
+            test_reader.stop();
+        }
+        
+        *self.status.lock().unwrap() = SerialStatus::Disconnected;
     }
 
     /// 获取最新的N组数据
@@ -99,6 +129,17 @@ impl SerialManager {
     /// 获取数据队列的引用 - 新增方法
     pub fn get_data_queue(&self) -> DataQueue {
         self.data_queue.clone()
+    }
+
+    /// 设置数据源类型
+    pub fn set_data_source_type(&mut self, source_type: DataSourceType) {
+        println!("[SerialManager] 数据源类型已设置为: {:?}", source_type);
+        *self.data_source_type.lock().unwrap() = source_type;
+    }
+    
+    /// 获取当前数据源类型
+    pub fn get_data_source_type(&self) -> DataSourceType {
+        self.data_source_type.lock().unwrap().clone()
     }
 }
 

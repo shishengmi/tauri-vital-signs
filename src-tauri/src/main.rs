@@ -7,6 +7,7 @@ mod data_processor;
 mod patient_store;
 mod serial_manager;
 mod serial_reader;
+mod test_reader;  // 新增
 mod types;
 
 use data_processor::DataProcessor;
@@ -14,7 +15,7 @@ use patient_store::{PatientInfo, PatientStore};
 use serial_manager::SerialManager;
 use std::sync::Mutex;
 use tauri::{Manager, State}; // 添加 Manager 导入
-use types::{ProcessedVitalSigns, SerialConfig, SerialStatus, VitalSigns};
+use types::{DataSourceType, ProcessedVitalSigns, SerialConfig, SerialStatus, VitalSigns};
 
 /// 全局串口管理器状态
 struct SerialManagerState(Mutex<SerialManager>);
@@ -201,6 +202,33 @@ fn get_lttb_compressed_data(state: State<DataProcessorState>) -> Vec<types::Lttb
     }
 }
 
+/// 设置数据源类型
+#[tauri::command]
+fn set_data_source_type(
+    source_type: String,
+    state: State<SerialManagerState>,
+) -> Result<(), String> {
+    let source_type = match source_type.as_str() {
+        "real" => DataSourceType::RealSerial,
+        "test" => DataSourceType::TestSimulation,
+        _ => return Err("无效的数据源类型，请使用 'real' 或 'test'".to_string()),
+    };
+    
+    let mut manager = state.0.lock().unwrap();
+    manager.set_data_source_type(source_type);
+    Ok(())
+}
+
+/// 获取当前数据源类型
+#[tauri::command]
+fn get_data_source_type(state: State<SerialManagerState>) -> String {
+    let manager = state.0.lock().unwrap();
+    match manager.get_data_source_type() {
+        DataSourceType::RealSerial => "real".to_string(),
+        DataSourceType::TestSimulation => "test".to_string(),
+    }
+}
+
 fn main() {
     // 初始化串口管理器
     let serial_manager = SerialManager::new();
@@ -224,7 +252,9 @@ fn main() {
             stop_data_processing,
             save_patient_info,
             load_patient_info,
-            delete_patient_info
+            delete_patient_info,
+            set_data_source_type,
+            get_data_source_type
         ])
         .setup(|app| {
             // 在 setup 中初始化 PatientStore，这时可以访问 AppHandle

@@ -66,7 +66,13 @@ impl SerialReader {
         }
 
         if let (Some(ecg), Some(spo2), Some(temp)) = (ecg, spo2, temp) {
-            Some(VitalSigns { ecg, spo2, temp })
+            Some(VitalSigns { 
+                ecg, 
+                spo2, 
+                temp, 
+                systolic: 0, // 默认值为0
+                diastolic: 0  // 默认值为0
+            })
         } else {
             None
         }

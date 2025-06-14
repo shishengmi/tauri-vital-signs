@@ -2,6 +2,15 @@ use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
+/// 数据源类型
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum DataSourceType {
+    /// 真实串口数据
+    RealSerial,
+    /// 测试模拟数据
+    TestSimulation,
+}
+
 /// 体征数据结构
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VitalSigns {
@@ -11,6 +20,10 @@ pub struct VitalSigns {
     pub spo2: i32,
     /// 体温
     pub temp: i32,
+    /// 收缩压(高压)
+    pub systolic: i32,
+    /// 舒张压(低压)
+    pub diastolic: i32,
 }
 
 /// LTTB数据点结构
